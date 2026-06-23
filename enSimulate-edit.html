@@ -1,0 +1,2682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EnSimulate - Visual Save Editor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a25;--border:#2a2a3a;
+  --text:#e0e0e0;--text2:#888;--accent:#6c8aff;--accent2:#4a6adf;
+  --danger:#ff4466;--success:#44ff88;--warn:#ffaa44;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;user-select:none}
+#toolbar{height:44px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:6px;flex-shrink:0;z-index:10}
+#toolbar .title{font-size:14px;font-weight:700;color:var(--accent);margin-right:12px;letter-spacing:1px}
+.tb-btn{height:30px;padding:0 14px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:12px;cursor:pointer;border-radius:4px;transition:all .15s;white-space:nowrap}
+.tb-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tb-btn.danger:hover{background:var(--danger);border-color:var(--danger)}
+.tb-btn.placing{background:var(--accent);color:#fff;border-color:var(--accent);animation:pulse .8s ease-in-out infinite alternate}
+@keyframes pulse{0%{opacity:.7}100%{opacity:1}}
+#placementHint{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--accent);background:rgba(0,0,0,.7);padding:4px 14px;border-radius:4px;z-index:6;pointer-events:none;display:none}
+.tb-sep{width:1px;height:24px;background:var(--border);margin:0 4px}
+.tb-label{font-size:11px;color:var(--text2);margin:0 4px}
+#workspace{flex:1;display:flex;overflow:hidden;position:relative}
+#canvasWrap{flex:1;position:relative;overflow:hidden}
+#canvas{display:block;cursor:crosshair}
+#sidebar{width:330px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#sidebarTabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
+.tab-btn{flex:1;padding:8px 4px;background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+#sidebarContent{flex:1;overflow-y:auto;padding:10px}
+#sidebarContent::-webkit-scrollbar{width:5px}
+#sidebarContent::-webkit-scrollbar-track{background:transparent}
+#sidebarContent::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.prop-section{margin-bottom:14px}
+.prop-section-title{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.prop-row{display:flex;align-items:center;margin-bottom:6px;gap:6px}
+.prop-label{font-size:11px;color:var(--text2);min-width:75px;flex-shrink:0}
+.prop-input{flex:1;height:26px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12px;padding:0 8px;border-radius:3px;outline:none;font-family:monospace}
+.prop-input:focus{border-color:var(--accent)}
+.prop-input:disabled{opacity:.4;cursor:not-allowed}
+.prop-select{flex:1;height:26px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:12px;padding:0 4px;border-radius:3px;outline:none}
+.prop-select:focus{border-color:var(--accent)}
+.prop-checkbox{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.prop-btn{height:26px;padding:0 12px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:11px;cursor:pointer;border-radius:3px;transition:all .15s}
+.prop-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.prop-btn.danger:hover{background:var(--danger);border-color:var(--danger)}
+.empty-msg{text-align:center;color:var(--text2);font-size:12px;padding:30px 10px}
+.inv-tag{display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;font-size:11px;border-radius:3px;margin:2px;cursor:pointer;transition:all .15s}
+.inv-tag:hover{border-color:var(--accent);color:var(--accent)}
+.inv-tag .x{color:var(--danger);margin-left:4px;font-weight:700}
+#statusbar{height:26px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:16px;font-size:11px;color:var(--text2);flex-shrink:0}
+#statusbar .val{color:var(--text);font-family:monospace}
+.obj-list{max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;margin-bottom:8px}
+.obj-list::-webkit-scrollbar{width:4px}
+.obj-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.obj-item{padding:4px 8px;font-size:11px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;transition:background .1s}
+.obj-item:last-child{border-bottom:none}
+.obj-item:hover{background:var(--surface2)}
+.obj-item.selected{background:var(--accent2);color:#fff}
+.obj-item .tag{font-size:10px;padding:1px 5px;border-radius:2px;background:var(--surface);color:var(--text2)}
+.obj-item.selected .tag{background:rgba(255,255,255,.15);color:#ddd}
+#tooltip{position:fixed;background:var(--surface);border:1px solid var(--border);padding:5px 9px;font-size:11px;border-radius:4px;pointer-events:none;z-index:100;display:none;max-width:250px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+#minimap{position:absolute;bottom:8px;left:8px;width:160px;height:120px;border:1px solid var(--border);border-radius:4px;overflow:hidden;z-index:5;opacity:.85}
+#minimapCanvas{width:100%;height:100%}
+#zoomInfo{position:absolute;top:8px;left:8px;font-size:11px;color:var(--text2);background:rgba(0,0,0,.5);padding:3px 8px;border-radius:3px;z-index:5;pointer-events:none}
+#helpOverlay{display:none;position:absolute;inset:0;background:rgba(0,0,0,.8);z-index:50;justify-content:center;align-items:center}
+#helpOverlay.visible{display:flex}
+#helpBox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:24px 32px;max-width:500px;max-height:80vh;overflow-y:auto}
+#helpBox h2{font-size:16px;color:var(--accent);margin-bottom:12px}
+#helpBox p{font-size:12px;line-height:1.6;margin-bottom:8px}
+#helpBox kbd{background:var(--surface2);border:1px solid var(--border);padding:1px 5px;border-radius:3px;font-size:11px;font-family:monospace}
+.can-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;padding:3px 6px;background:var(--bg);border-radius:3px;border:1px solid var(--border)}
+.can-row .can-label{font-size:11px;flex:1}
+.can-row .can-val{font-size:10px;color:var(--text2);font-family:monospace}
+
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button class="tb-btn" onclick="newWorld()">New World</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="importFile()">Import File</button>
+  <button class="tb-btn" onclick="loadFromStorage()">Load Local</button>
+  <button class="tb-btn" onclick="saveToStorage()">Save Local</button>
+  <button class="tb-btn" onclick="exportFile()">Export File</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" id="btnAddEntity" onmousedown="startPlacement('entity')">+ Entity</button>
+  <button class="tb-btn" id="btnAddBH" onmousedown="startPlacement('blackhole')">+ BlackHole</button>
+  <button class="tb-btn" id="btnAddWall" onmousedown="startPlacement('wall')">+ Wall</button>
+  <button class="tb-btn" id="btnAddWord" onmousedown="startPlacement('scattered')">+ Scatter</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn danger" onclick="deleteSelected()">Delete</button>
+  <button class="tb-btn" onclick="copySelected()">Copy</button>
+  <button class="tb-btn" onclick="pasteClipboard()">Paste</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" onclick="toggleHelp()">?</button>
+  <span class="tb-label" id="fileStatus"></span>
+</div>
+<div id="workspace">
+  <div id="canvasWrap">
+    <canvas id="canvas"></canvas>
+    <div id="zoomInfo">100%</div>
+    <div id="placementHint">Click to place</div>
+    <div id="minimap"><canvas id="minimapCanvas" width="160" height="120"></canvas></div>
+  </div>
+  <div id="sidebar">
+    <div id="sidebarTabs">
+      <button class="tab-btn active" data-tab="player" onclick="switchTab('player')">Player</button>
+      <button class="tab-btn" data-tab="world" onclick="switchTab('world')">World</button>
+      <button class="tab-btn" data-tab="objects" onclick="switchTab('objects')">Objects</button>
+    </div>
+    <div id="sidebarContent">
+    </div>
+  </div>
+</div>
+<div id="statusbar">
+  <span>Mouse: <span class="val" id="statCoord">0, 0</span></span>
+  <span>Zoom: <span class="val" id="statZoom">100%</span></span>
+  <span>Entities: <span class="val" id="statEntities">0</span></span>
+  <span>Walls: <span class="val" id="statWalls">0</span></span>
+  <span>BHs: <span class="val" id="statBHs">0</span></span>
+  <span>Words: <span class="val" id="statWords">0</span></span>
+  <span>Selected: <span class="val" id="statSel">0</span></span>
+</div>
+<div id="tooltip"></div>
+<div id="helpOverlay" onclick="toggleHelp()">
+  <div id="helpBox" onclick="event.stopPropagation()">
+    <h2>EnSimulate Save Editor - Help</h2>
+    <p><kbd>Scroll</kbd> Zoom in/out</p>
+    <p><kbd>Right Drag</kbd> / <kbd>Middle Drag</kbd> Pan camera</p>
+    <p><kbd>Left Click</kbd> Select object (including player)</p>
+    <p><kbd>Left Drag</kbd> on selected object to move it</p>
+    <p><kbd>Left Drag</kbd> on empty area to box/marquee select</p>
+    <p><kbd>Shift + Left Drag</kbd> Box/marquee selection (alternative)</p>
+    <p><kbd>Drag ">"</kbd> Change velocity direction (white arrow)</p>
+    <p><kbd>Drag Rotation Handle</kbd> (orange circle) Rotate object angle</p>
+    <p><kbd>Drag Resize Handles</kbd> (blue squares on walls) Resize wall</p>
+    <p><kbd>Shift</kbd> while rotating/resizing Snap to 15°/5px increments</p>
+    <p><kbd>+ Entity/Wall/BH/Word</kbd> Hold button, drag to canvas, release to place</p>
+    <p><kbd>Esc</kbd> Cancel placement / Deselect</p>
+    <p><kbd>Delete</kbd> Delete selected object(s)</p>
+    <p><kbd>Ctrl+Z</kbd> Undo last action</p>
+    <p><kbd>G</kbd> Toggle grid</p>
+    <p><kbd>F</kbd> Focus on selected / center player</p>
+    <p><kbd>M</kbd> Toggle sidebar</p>
+    <p><kbd>L</kbd> Toggle toolbar</p>
+    <p><kbd>I</kbd> Toggle minimap</p>
+    <p><kbd>E</kbd> Place Entity</p>
+    <p><kbd>P</kbd> Place Projectile</p>
+    <p><kbd>O</kbd> Place Black Hole</p>
+    <p><kbd>S</kbd> Place Scatter</p>
+    <p><kbd>W</kbd> Place Wall</p>
+  </div>
+</div>
+<input type="file" id="fileInput" accept=".txt" style="display:none">
+
+<script>
+// ===================== CONSTANTS =====================
+const E_ID=0,E_WORD=1,E_X=2,E_Y=3,E_VX=4,E_VY=5,E_SPEED=6,E_SIZE=7,E_TYPE=8,E_ANGLE=9,
+  E_BEHAVIOR=10,E_WANDER_ANGLE=11,E_WANDER_TIMER=12,E_WANDER_INTERVAL=13,
+  E_CAN_THROW=14,E_CAN_COMB=15,E_CAN_WALL=16,E_CAN_ATK=17,
+  E_IS_THROWING=18,E_IS_COMBINING=19,E_TARGET=20,E_VIEW_DIST=21,
+  E_SEEN_PLAYER=22,E_LAST_SEEN_TIME=23,E_PUSH_FORCE=24,
+  E_LIFETIME=25,E_BOUNCE_COUNT=26,E_INVULN_TIME=27,E_DAMAGE=28,E_OWNER=29,E_INVENTORY=30,E_SHOOT_COOLDOWN=31;
+
+const BH_X=0,BH_Y=1,BH_MASS=2,BH_ANGLE=3,BH_TARGET=4,BH_SPEED=5,BH_ABS=6,BH_WA=7,BH_WT=8,BH_TT=9,BH_TI=10;
+
+const P_ID=0,P_WORD=1,P_X=2,P_Y=3,P_VX=4,P_VY=5,P_ANGLE=6,P_TYPE=7,P_DAMAGE=8,P_OWNER=9,P_PROTECT_TIME=10,P_LIFETIME=11;
+
+const W_ID=0,W_WORD=1,W_X=2,W_Y=3,W_WIDTH=4,W_HEIGHT=5,W_ANGLE=6;
+
+const S_ID=0,S_WORD=1,S_X=2,S_Y=3,S_VX=4,S_VY=5,S_ANGLE=6,S_LIFETIME=7;
+
+const ENTITY_TYPE={NORMAL:0,NUMBER:1,SCATTER:2,WALL:3,PLAYER:4,PROJECTILE:5,SHARD:6,WRITER:7};
+const TYPE_NAMES=['Normal','Number','Scatter','Wall','Player','Projectile','Shard','Writer'];
+const BEHAVIOR_NAMES=['Wander','Hunt','Evade'];
+
+// Collision hitbox colors by entity type
+const HITBOX_COLORS = {
+  [ENTITY_TYPE.NORMAL]:  {fill:'rgba(255,255,255,0.08)', stroke:'rgba(255,255,255,0.35)', label:'#fff'},
+  [ENTITY_TYPE.NUMBER]:  {fill:'rgba(68,255,136,0.08)', stroke:'rgba(68,255,136,0.4)',  label:'#4f8'},
+  [ENTITY_TYPE.SCATTER]: {fill:'rgba(136,136,136,0.06)', stroke:'rgba(136,136,136,0.3)', label:'#888'},
+  [ENTITY_TYPE.WRITER]:  {fill:'rgba(68,221,255,0.08)', stroke:'rgba(68,221,255,0.4)',  label:'#4df'},
+  [ENTITY_TYPE.SHARD]:   {fill:'rgba(170,170,170,0.06)', stroke:'rgba(170,170,170,0.3)', label:'#aaa'},
+  [ENTITY_TYPE.PROJECTILE]:{fill:'rgba(255,221,68,0.08)',stroke:'rgba(255,221,68,0.4)',  label:'#fd4'},
+  [ENTITY_TYPE.WALL]:    {fill:'rgba(200,200,200,0.06)',stroke:'rgba(200,200,200,0.3)', label:'#ccc'},
+  [ENTITY_TYPE.PLAYER]:  {fill:'rgba(68,255,136,0.08)', stroke:'rgba(68,255,136,0.5)',  label:'#4f8'},
+};
+function getNumberHitboxColor(num){
+  if(num<0) return {fill:'rgba(255,68,255,0.08)',stroke:'rgba(255,68,255,0.4)',label:'#f4f'};
+  if(num===0) return {fill:'rgba(255,255,255,0.08)',stroke:'rgba(255,255,255,0.35)',label:'#fff'};
+  return {fill:'rgba(68,255,136,0.08)',stroke:'rgba(68,255,136,0.4)',label:'#4f8'};
+}
+
+// ===================== STATE =====================
+let save = null;
+let camera = {x:0,y:0,zoom:1};
+let selection = null;         // single selection: {type, index}
+let multiSelection = [];      // box selection: [{type, index}, ...]
+let currentTab = 'player';
+let showGrid = true;
+let isDragging = false;
+let isPanning = false;
+let isBoxSelecting = false;   // Shift + left drag
+let isDraggingArrow = false;  // dragging angle arrow ">"
+let arrowDragObj = null;      // {type, index} of the object whose arrow is being dragged
+let arrowDragStartAngle = 0;
+let boxStart = null;          // {x, y} in screen coords
+let boxEnd = null;
+let dragStartWorld = null;
+let dragObjStartPos = null;
+let dragMultiStartPos = null;
+let arrowMultiStartAngles = null; // [{sel, startAngleDeg}] for multi-selection angle sync
+let panStart = null;
+let panCamStart = null;
+let mouseWorld = {x:0,y:0};
+let mouseScreen = {x:0,y:0};
+let hoveredObj = null;
+let undoStack = [];
+const MAX_UNDO = 30;
+
+// Placement mode state
+let placementMode = null;  // null | 'entity' | 'blackhole' | 'wall' | 'scattered'
+
+// Resize handle state
+let isResizing = false;
+let resizeHandle = null;   // 'nw','ne','sw','se' for walls
+let resizeStartWorld = null;
+let resizeStartDims = null; // {x,y,w,h,a} of wall at drag start
+let resizeMultiStartDims = null; // [{sel, dims:{x,y,w,h}}] for multi-selection resize sync
+
+// Rotation handle state
+let isRotating = false;
+let rotateObj = null;      // {type, index}
+let rotateStartAngle = 0;
+let rotateMultiStartAngles = null; // [{sel, startAngleDeg}] for multi-selection rotation sync
+
+// ===================== CANVAS SETUP =====================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = true;
+ctx.imageSmoothingQuality = 'high';
+const mmCanvas = document.getElementById('minimapCanvas');
+const mmCtx = mmCanvas.getContext('2d');
+
+function resizeCanvas(){
+  const wrap = document.getElementById('canvasWrap');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = wrap.clientWidth * dpr;
+  canvas.height = wrap.clientHeight * dpr;
+  canvas.style.width = wrap.clientWidth + 'px';
+  canvas.style.height = wrap.clientHeight + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// Initialize with a blank world on startup
+newWorld();
+
+// ===================== SAVE PARSING =====================
+function parseSave(text){
+  const lines = text.split('\n');
+  let idx = 0;
+  const next = ()=> idx<lines.length ? lines[idx++] : '';
+  const nextNum = (d=0)=>{ const v=parseFloat(next()); return isNaN(v)?d:v; };
+  const nextInt = (d=0)=>{ const v=parseInt(next()); return isNaN(v)?d:v; };
+  const nextStr = (d='')=>{ const v=next(); return v===undefined||v===''?d:v; };
+
+  const data = {};
+  data.playerX = nextNum(10000);
+  data.playerY = nextNum(10000);
+  data.playerSpeed = nextNum(9);
+  data.deathCount = nextNum(0);
+  data.score = nextNum(0);
+  data.health = nextNum(20);
+  data.gameSpeed = nextNum(0.8);
+  data.worldWidth = nextNum(20000);
+  data.worldHeight = nextNum(20000);
+  data.playerAngle = nextNum(0);
+
+  const bhCount = Math.min(nextInt(0), 50);
+  data.blackHoles = [];
+  for(let b=0;b<bhCount;b++){
+    data.blackHoles.push([
+      nextNum(data.worldWidth/2), nextNum(data.worldHeight/2),
+      nextNum(1), nextNum(0), null, nextNum(0.5), nextNum(110),
+      nextNum(Math.random()*6.283), nextNum(0), nextNum(0), nextNum(300)
+    ]);
+  }
+
+  data.spawnCount = nextInt(-1);
+  data.spawnMax = nextInt(3900);
+  data.spawnMin = nextInt(1400);
+  data.maxInventorySize = Math.min(nextInt(7), 50);
+
+  const entityCount = Math.min(nextInt(0), 5000);
+  data.entities = [];
+  for(let j=0;j<entityCount;j++){
+    const type = nextInt(0);
+    const len = Math.min(nextInt(50), 50);
+    const e = [];
+    for(let k=0;k<len;k++){
+      if(k===E_WORD) e.push(nextStr(''));
+      else e.push(nextNum(0));
+    }
+    while(e.length<32) e.push(0);
+    e[E_TYPE] = type;
+    e[E_INVENTORY] = e[E_INVENTORY] || null;
+    data.entities.push(e);
+  }
+
+  const projCount = Math.min(nextInt(0), 2000);
+  data.projectiles = [];
+  for(let i=0;i<projCount;i++){
+    data.projectiles.push([
+      nextNum(),nextStr(''),nextNum(),nextNum(),nextNum(),nextNum(),
+      nextNum(),nextInt(0),nextNum(1),nextNum(0),nextNum(60),nextNum(1800)
+    ]);
+  }
+
+  const wallCount = Math.min(nextInt(0), 500);
+  data.walls = [];
+  for(let j=0;j<wallCount;j++){
+    const wid=nextNum(),ww=nextStr(''),wx=nextNum(),wy=nextNum(),ww2=nextNum(),wh=nextNum(),wa=nextNum();
+    if(ww&&ww.length>0&&ww2>0&&wh>0) data.walls.push([wid,ww,wx,wy,ww2,wh,wa]);
+  }
+
+  const scatterCount = Math.min(nextInt(0), 2000);
+  data.scatteredWords = [];
+  for(let i=0;i<scatterCount;i++){
+    const sid=nextNum(),sw=nextStr(''),sx=nextNum(),sy=nextNum(),svx=nextNum(),svy=nextNum(),sa=nextNum(),sl=nextNum(1800);
+    if(sw&&sw.length>0) data.scatteredWords.push([sid,sw,sx,sy,svx,svy,sa,sl]);
+  }
+
+  const invCount = Math.min(nextInt(0), 50);
+  data.inventory = [];
+  for(let j=0;j<invCount;j++){
+    const w=nextStr('');
+    if(w) data.inventory.push(w);
+  }
+
+  return data;
+}
+
+function serializeSave(data){
+  const parts = [];
+  const push = v => parts.push(String(v));
+
+  push(data.playerX); push(data.playerY); push(data.playerSpeed);
+  push(data.deathCount); push(data.score); push(data.health);
+  push(data.gameSpeed); push(data.worldWidth); push(data.worldHeight);
+  push(data.playerAngle);
+
+  push(data.blackHoles.length);
+  data.blackHoles.forEach(bh=>{
+    push(bh[BH_X]);push(bh[BH_Y]);push(bh[BH_MASS]);push(bh[BH_ANGLE]);
+    push(bh[BH_SPEED]);push(bh[BH_ABS]);push(bh[BH_WA]);push(bh[BH_WT]);push(bh[BH_TT]);push(bh[BH_TI]);
+  });
+
+  push(data.spawnCount);push(data.spawnMax);push(data.spawnMin);push(data.maxInventorySize);
+
+  push(data.entities.length);
+  data.entities.forEach(e=>{
+    push(e[E_TYPE]);
+    push(e.length);
+    for(let k=0;k<e.length;k++) push(e[k]);
+  });
+
+  push(data.projectiles.length);
+  data.projectiles.forEach(p=>{
+    push(p[P_ID]);push(p[P_WORD]);push(p[P_X]);push(p[P_Y]);push(p[P_VX]);push(p[P_VY]);
+    push(p[P_ANGLE]);push(p[P_TYPE]);push(p[P_DAMAGE]);push(p[P_OWNER]);push(p[P_PROTECT_TIME]);push(p[P_LIFETIME]);
+  });
+
+  push(data.walls.length);
+  data.walls.forEach(w=>{
+    push(w[W_ID]);push(w[W_WORD]);push(w[W_X]);push(w[W_Y]);push(w[W_WIDTH]);push(w[W_HEIGHT]);push(w[W_ANGLE]);
+  });
+
+  push(data.scatteredWords.length);
+  data.scatteredWords.forEach(s=>{
+    push(s[S_ID]);push(s[S_WORD]);push(s[S_X]);push(s[S_Y]);push(s[S_VX]);push(s[S_VY]);push(s[S_ANGLE]);push(s[S_LIFETIME]);
+  });
+
+  push(data.inventory.length);
+  data.inventory.forEach(w=>push(w));
+
+  return parts.join('\n');
+}
+
+// ===================== UNDO =====================
+function pushUndo(){
+  undoStack.push(JSON.stringify(save));
+  if(undoStack.length>MAX_UNDO) undoStack.shift();
+}
+function doUndo(){
+  if(undoStack.length===0) return;
+  save = JSON.parse(undoStack.pop());
+  selection = null;
+  multiSelection = [];
+  updateSidebar();
+}
+
+// ===================== IMPORT / EXPORT =====================
+function importFile(){ document.getElementById('fileInput').click(); }
+document.getElementById('fileInput').addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{
+      save = parseSave(ev.target.result);
+      camera.x = save.playerX - canvasW()/2;
+      camera.y = save.playerY - canvasH()/2;
+      camera.zoom = 1;
+      selection = null;
+      multiSelection = [];
+      cancelPlacement();
+      undoStack = [];
+      updateSidebar();
+      document.getElementById('fileStatus').textContent = 'Loaded: '+file.name;
+    }catch(err){ alert('Failed to parse: '+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+function loadFromStorage(){
+  const data = localStorage.getItem('lvQuickSave');
+  if(!data){alert('No save in localStorage');return;}
+  try{
+    save = parseSave(data);
+    camera.x = save.playerX - canvasW()/2;
+    camera.y = save.playerY - canvasH()/2;
+    camera.zoom = 1;
+    selection = null;
+    multiSelection = [];
+    cancelPlacement();
+    undoStack = [];
+    updateSidebar();
+    document.getElementById('fileStatus').textContent = 'Loaded from localStorage';
+  }catch(err){ alert('Failed: '+err.message); }
+}
+
+function saveToStorage(){
+  if(!save) return;
+  localStorage.setItem('lvQuickSave', serializeSave(save));
+  document.getElementById('fileStatus').textContent = 'Saved to localStorage';
+}
+
+function exportFile(){
+  if(!save) return;
+  const text = serializeSave(save);
+  const blob = new Blob([text],{type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='enSimulate_'+Date.now()+'.txt';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  document.getElementById('fileStatus').textContent = 'Exported';
+}
+
+// ===================== NEW WORLD =====================
+function createNewWorld(){
+  return {
+    playerX: 10000, playerY: 10000, playerSpeed: 9,
+    deathCount: 0, score: 0, health: 20,
+    gameSpeed: 0.8, worldWidth: 20000, worldHeight: 20000, playerAngle: 0,
+    blackHoles: [],
+    spawnCount: -1, spawnMax: 3900, spawnMin: 1400, maxInventorySize: 7,
+    entities: [], projectiles: [], walls: [], scatteredWords: [], inventory: []
+  };
+}
+function newWorld(){
+  save = createNewWorld();
+  camera.x = save.playerX - canvasW()/2/camera.zoom;
+  camera.y = save.playerY - canvasH()/2/camera.zoom;
+  selection = null;
+  multiSelection = [];
+  undoStack = [];
+  updateSidebar();
+  document.getElementById('fileStatus').textContent = 'New world created';
+}
+
+// ===================== ADD OBJECTS (PLACEMENT MODE) =====================
+// Press-hold toolbar button → drag to canvas → release to place
+let placementButtonHeld = false;
+
+function startPlacement(type){
+  if(!save) return;
+  enterPlacement(type);
+  placementButtonHeld = true;
+}
+
+function enterPlacement(type){
+  if(!save) return;
+  placementMode = type;
+  // Highlight the active button
+  document.getElementById('btnAddEntity').classList.toggle('placing', type==='entity');
+  document.getElementById('btnAddBH').classList.toggle('placing', type==='blackhole');
+  document.getElementById('btnAddWall').classList.toggle('placing', type==='wall');
+  document.getElementById('btnAddWord').classList.toggle('placing', type==='scattered');
+  // Show hint
+  const hint = document.getElementById('placementHint');
+  const labels = {entity:'Drag to canvas to place Entity (Esc cancel)', blackhole:'Drag to canvas to place Black Hole (Esc cancel)', wall:'Drag to canvas to place Wall (Esc cancel)', scattered:'Drag to canvas to place Word (Esc cancel)', projectile:'Drag to canvas to place Projectile (Esc cancel)'};
+  hint.textContent = labels[type] + ' (Esc to cancel)';
+  hint.style.display = 'block';
+  canvas.style.cursor = 'cell';
+  // Deselect current
+  selection = null;
+  multiSelection = [];
+  updateSidebar();
+}
+function cancelPlacement(){
+  placementMode = null;
+  placementButtonHeld = false;
+  document.getElementById('btnAddEntity').classList.remove('placing');
+  document.getElementById('btnAddBH').classList.remove('placing');
+  document.getElementById('btnAddWall').classList.remove('placing');
+  document.getElementById('btnAddWord').classList.remove('placing');
+  document.getElementById('placementHint').style.display = 'none';
+  canvas.style.cursor = 'crosshair';
+}
+function placeObject(wx, wy){
+  if(!save || !placementMode) return;
+  pushUndo();
+  if(placementMode === 'entity'){
+    const e = new Array(32).fill(0);
+    e[E_ID] = Date.now()+Math.random();
+    e[E_WORD] = 'NEW';
+    e[E_X] = wx; e[E_Y] = wy;
+    e[E_SPEED] = save.gameSpeed;
+    e[E_SIZE] = 20;
+    e[E_TYPE] = ENTITY_TYPE.NORMAL;
+    e[E_BEHAVIOR] = 0;
+    e[E_WANDER_ANGLE] = Math.random()*Math.PI*2;
+    e[E_WANDER_INTERVAL] = 60;
+    e[E_VIEW_DIST] = 300;
+    e[E_INVENTORY] = null;
+    save.entities.push(e);
+    selection = {type:'entity',index:save.entities.length-1};
+  } else if(placementMode === 'blackhole'){
+    save.blackHoles.push([wx,wy,1,0,null,0.5,110,Math.random()*6.283,0,0,300]);
+    selection = {type:'blackhole',index:save.blackHoles.length-1};
+  } else if(placementMode === 'wall'){
+    save.walls.push([Date.now()+Math.random(),'WALL',wx,wy,100,36,0]);
+    selection = {type:'wall',index:save.walls.length-1};
+  } else if(placementMode === 'scattered'){
+    save.scatteredWords.push([Date.now()+Math.random(),'word',wx,wy,0,0,0,1800]);
+    selection = {type:'scattered',index:save.scatteredWords.length-1};
+  } else if(placementMode === 'projectile'){
+    save.projectiles.push([Date.now()+Math.random(),'>',wx,wy,0,0,0,0,10,null,0,300]);
+    selection = {type:'projectile',index:save.projectiles.length-1};
+  }
+  multiSelection = [];
+  cancelPlacement();
+  updateSidebar();
+}
+
+// Quick create object at mouse position (keyboard shortcut)
+function quickCreate(type){
+  if(!save) return;
+  placementMode = type;
+  placeObject(mouseWorld.x, mouseWorld.y);
+}
+
+// Global mouseup: if in placement mode and button was held, place on canvas or stay in placement mode
+document.addEventListener('mouseup', e=>{
+  if(placementMode && placementButtonHeld){
+    placementButtonHeld = false;
+    // Check if mouse is over the canvas
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    if(sx >= 0 && sx <= rect.width && sy >= 0 && sy <= rect.height){
+      const w = screenToWorld(sx, sy);
+      placeObject(w.x, w.y);
+    } else {
+      // Released on toolbar or outside canvas — stay in placement mode
+    }
+  }
+  // End arrow drag on global mouseup (even if mouse left canvas)
+  if(isDraggingArrow){
+    isDraggingArrow = false;
+    arrowDragObj = null;
+    arrowMultiStartAngles = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+  // End position drag on global mouseup (even if mouse left canvas)
+  if(isDragging){
+    isDragging = false;
+    dragMultiStartPos = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+});
+
+// Global mousemove: track position and continue drags when mouse leaves canvas
+document.addEventListener('mousemove', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  const insideCanvas = sx >= 0 && sx <= rect.width && sy >= 0 && sy <= rect.height;
+  // Always update mouseWorld
+  if(sx >= -200 && sx <= rect.width+200 && sy >= -200 && sy <= rect.height+200){
+    mouseWorld = screenToWorld(sx, sy);
+  }
+  // Only handle drags when mouse is OUTSIDE canvas (canvas mousemove handles when inside)
+  if(insideCanvas) return;
+  
+  // Arrow drag outside canvas
+  if(isDraggingArrow && arrowDragObj && save){
+    const objPos = getObjPos(arrowDragObj);
+    if(objPos){
+      const dx = mouseWorld.x - objPos.x;
+      const dy = mouseWorld.y - objPos.y;
+      const newAngleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+      const finalAngle = e.shiftKey ? Math.round(newAngleDeg/15)*15 : newAngleDeg;
+      const angleDelta = finalAngle - (arrowDragStartAngle * 180 / Math.PI);
+      if(arrowDragObj.type==='entity'){
+        save.entities[arrowDragObj.index][E_ANGLE] = finalAngle;
+      }else if(arrowDragObj.type==='scattered'){
+        save.scatteredWords[arrowDragObj.index][S_ANGLE] = finalAngle;
+      }else if(arrowDragObj.type==='projectile'){
+        save.projectiles[arrowDragObj.index][P_ANGLE] = finalAngle;
+      }else if(arrowDragObj.type==='player'){
+        save.playerAngle = finalAngle;
+      }
+      if(arrowMultiStartAngles && arrowMultiStartAngles.length > 0){
+        arrowMultiStartAngles.forEach(item=>{
+          if(item.sel.type===arrowDragObj.type && item.sel.index===arrowDragObj.index) return;
+          const newAngle = item.startAngleDeg + angleDelta;
+          if(item.sel.type==='entity') save.entities[item.sel.index][E_ANGLE] = newAngle;
+          else if(item.sel.type==='projectile') save.projectiles[item.sel.index][P_ANGLE] = newAngle;
+          else if(item.sel.type==='wall') save.walls[item.sel.index][W_ANGLE] = newAngle;
+          else if(item.sel.type==='player') save.playerAngle = newAngle;
+          else if(item.sel.type==='scattered') save.scatteredWords[item.sel.index][S_ANGLE] = newAngle;
+        });
+      }
+    }
+  }
+  // Position drag outside canvas
+  if(isDragging && selection && dragObjStartPos && save){
+    const dx = mouseWorld.x - dragStartWorld.x;
+    const dy = mouseWorld.y - dragStartWorld.y;
+    setObjPos(selection, dragObjStartPos.x + dx, dragObjStartPos.y + dy);
+    if(multiSelection.length > 0){
+      if(!dragMultiStartPos){
+        dragMultiStartPos = multiSelection.map(s=>({sel:s, pos:getObjPos(s)}));
+      }
+      dragMultiStartPos.forEach(item=>{
+        if(item.pos && !(item.sel.type===selection.type && item.sel.index===selection.index)){
+          setObjPos(item.sel, item.pos.x + dx, item.pos.y + dy);
+        }
+      });
+    }
+  }
+  // Rotation handle drag outside canvas
+  if(isRotating && rotateObj && save){
+    const objPos = getObjPos(rotateObj);
+    if(objPos){
+      const dx = mouseWorld.x - objPos.x;
+      const dy = mouseWorld.y - objPos.y;
+      let newAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      if(e.shiftKey) newAngle = Math.round(newAngle/15)*15;
+      const angleDelta = newAngle - rotateStartAngle;
+      if(rotateObj.type==='entity') save.entities[rotateObj.index][E_ANGLE] = newAngle;
+      else if(rotateObj.type==='wall') save.walls[rotateObj.index][W_ANGLE] = newAngle;
+      else if(rotateObj.type==='player') save.playerAngle = newAngle;
+      else if(rotateObj.type==='projectile') save.projectiles[rotateObj.index][P_ANGLE] = newAngle;
+      else if(rotateObj.type==='scattered') save.scatteredWords[rotateObj.index][S_ANGLE] = newAngle;
+      // Sync angle delta to all multi-selected objects
+      if(rotateMultiStartAngles && rotateMultiStartAngles.length > 0){
+        rotateMultiStartAngles.forEach(item=>{
+          if(item.sel.type===rotateObj.type && item.sel.index===rotateObj.index) return;
+          const newAngle2 = item.startAngleDeg + angleDelta;
+          if(item.sel.type==='entity') save.entities[item.sel.index][E_ANGLE] = newAngle2;
+          else if(item.sel.type==='projectile') save.projectiles[item.sel.index][P_ANGLE] = newAngle2;
+          else if(item.sel.type==='wall') save.walls[item.sel.index][W_ANGLE] = newAngle2;
+          else if(item.sel.type==='player') save.playerAngle = newAngle2;
+          else if(item.sel.type==='scattered') save.scatteredWords[item.sel.index][S_ANGLE] = newAngle2;
+        });
+      }
+    }
+  }
+  // Resize handle drag outside canvas
+  if(isResizing && resizeHandle && selection && selection.type==='wall' && save){
+    const wall = save.walls[selection.index];
+    const angle = (resizeStartDims.a||0)*Math.PI/180;
+    const dx = mouseWorld.x - resizeStartWorld.x;
+    const dy = mouseWorld.y - resizeStartWorld.y;
+    const ldx = dx*Math.cos(-angle) - dy*Math.sin(-angle);
+    const ldy = dx*Math.sin(-angle) + dy*Math.cos(-angle);
+    let newW = resizeStartDims.w, newH = resizeStartDims.h;
+    if(resizeHandle==='ne'){ newW = Math.max(20, resizeStartDims.w + ldx*2); newH = Math.max(10, resizeStartDims.h - ldy*2); }
+    else if(resizeHandle==='nw'){ newW = Math.max(20, resizeStartDims.w - ldx*2); newH = Math.max(10, resizeStartDims.h - ldy*2); }
+    else if(resizeHandle==='se'){ newW = Math.max(20, resizeStartDims.w + ldx*2); newH = Math.max(10, resizeStartDims.h + ldy*2); }
+    else if(resizeHandle==='sw'){ newW = Math.max(20, resizeStartDims.w - ldx*2); newH = Math.max(10, resizeStartDims.h + ldy*2); }
+    if(e.shiftKey){ newW = Math.round(newW/5)*5; newH = Math.round(newH/5)*5; }
+    wall[W_WIDTH] = newW;
+    wall[W_HEIGHT] = newH;
+    // Sync resize delta to all multi-selected walls
+    const dw = newW - resizeStartDims.w;
+    const dh = newH - resizeStartDims.h;
+    if(resizeMultiStartDims && resizeMultiStartDims.length > 1){
+      resizeMultiStartDims.forEach(item=>{
+        if(item.sel.type===selection.type && item.sel.index===selection.index) return;
+        const mw = save.walls[item.sel.index];
+        if(!mw) return;
+        mw[W_WIDTH] = Math.max(20, item.dims.w + dw);
+        mw[W_HEIGHT] = Math.max(10, item.dims.h + dh);
+      });
+    }
+  }
+});
+
+function addEntity(){ enterPlacement('entity'); }
+function addBlackHole(){ enterPlacement('blackhole'); }
+function addWall(){ enterPlacement('wall'); }
+function addScatteredWord(){ enterPlacement('scattered'); }
+function deleteSelected(){
+  if(!save) return;
+  // Multi-selection delete
+  if(multiSelection.length > 0){
+    pushUndo();
+    // Sort indices descending so splice doesn't mess up
+    const toDelete = {};
+    multiSelection.forEach(s=>{
+      if(!toDelete[s.type]) toDelete[s.type]=[];
+      toDelete[s.type].push(s.index);
+    });
+    for(const type in toDelete){
+      toDelete[type].sort((a,b)=>b-a).forEach(idx=>{
+        if(type==='entity') save.entities.splice(idx,1);
+        else if(type==='blackhole') save.blackHoles.splice(idx,1);
+        else if(type==='wall') save.walls.splice(idx,1);
+        else if(type==='scattered') save.scatteredWords.splice(idx,1);
+        else if(type==='projectile') save.projectiles.splice(idx,1);
+      });
+    }
+    multiSelection = [];
+    selection = null;
+    updateSidebar();
+    return;
+  }
+  if(!selection) return;
+  if(selection.type==='player') return;
+  pushUndo();
+  const {type,index} = selection;
+  if(type==='entity') save.entities.splice(index,1);
+  else if(type==='blackhole') save.blackHoles.splice(index,1);
+  else if(type==='wall') save.walls.splice(index,1);
+  else if(type==='scattered') save.scatteredWords.splice(index,1);
+  else if(type==='projectile') save.projectiles.splice(index,1);
+  selection = null;
+  updateSidebar();
+}
+
+// ===================== COPY / PASTE =====================
+let clipboard = []; // [{type, data:[...]}] — copied object data
+
+function copySelected(){
+  if(!save) return;
+  clipboard = [];
+  // Collect all objects to copy (single or multi-selection)
+  const items = multiSelection.length > 0 ? multiSelection : (selection ? [selection] : []);
+  if(items.length === 0) return;
+  // Group by type
+  const groups = {};
+  items.forEach(s=>{
+    if(s.type==='player') return; // can't copy player
+    if(!groups[s.type]) groups[s.type]=[];
+    groups[s.type].push(s.index);
+  });
+  for(const type in groups){
+    groups[type].sort((a,b)=>a-b);
+    groups[type].forEach(idx=>{
+      let obj = null;
+      if(type==='entity') obj = save.entities[idx];
+      else if(type==='blackhole') obj = save.blackHoles[idx];
+      else if(type==='wall') obj = save.walls[idx];
+      else if(type==='scattered') obj = save.scatteredWords[idx];
+      else if(type==='projectile') obj = save.projectiles[idx];
+      if(obj) clipboard.push({type, data:obj.slice()});
+    });
+  }
+  document.getElementById('fileStatus').textContent = clipboard.length > 0 ? `Copied ${clipboard.length} object(s)` : '';
+}
+
+function pasteClipboard(){
+  if(!save || clipboard.length === 0) return;
+  pushUndo();
+  const OFFSET = 80; // world-space offset so paste doesn't overlap original
+  const newSelection = [];
+  clipboard.forEach(item=>{
+    const d = item.data.slice(); // clone
+    // Offset position so pasted object appears shifted
+    if(item.type==='entity'){ d[E_X]+=OFFSET; d[E_Y]+=OFFSET; save.entities.push(d); newSelection.push({type:'entity',index:save.entities.length-1}); }
+    else if(item.type==='blackhole'){ d[BH_X]+=OFFSET; d[BH_Y]+=OFFSET; save.blackHoles.push(d); newSelection.push({type:'blackhole',index:save.blackHoles.length-1}); }
+    else if(item.type==='wall'){ d[W_X]+=OFFSET; d[W_Y]+=OFFSET; save.walls.push(d); newSelection.push({type:'wall',index:save.walls.length-1}); }
+    else if(item.type==='scattered'){ d[S_X]+=OFFSET; d[S_Y]+=OFFSET; save.scatteredWords.push(d); newSelection.push({type:'scattered',index:save.scatteredWords.length-1}); }
+    else if(item.type==='projectile'){ d[P_X]+=OFFSET; d[P_Y]+=OFFSET; save.projectiles.push(d); newSelection.push({type:'projectile',index:save.projectiles.length-1}); }
+  });
+  if(newSelection.length > 0){
+    selection = newSelection[0];
+    multiSelection = newSelection;
+    if(selection.type !== 'player' && currentTab !== 'objects') switchTab('objects');
+  }
+  updateSidebar();
+  document.getElementById('fileStatus').textContent = `Pasted ${clipboard.length} object(s)`;
+}
+
+// ===================== CAMERA =====================
+function worldToScreen(wx,wy){ return { x:(wx-camera.x)*camera.zoom, y:(wy-camera.y)*camera.zoom }; }
+function screenToWorld(sx,sy){ return { x:sx/camera.zoom+camera.x, y:sy/camera.zoom+camera.y }; }
+// Get canvas dimensions in CSS pixels (logical pixels)
+function canvasW(){ return canvas.width / (window.devicePixelRatio||1); }
+function canvasH(){ return canvas.height / (window.devicePixelRatio||1); }
+function centerOnPlayer(){
+  if(!save) return;
+  camera.x = save.playerX - canvasW()/2/camera.zoom;
+  camera.y = save.playerY - canvasH()/2/camera.zoom;
+}
+function focusSelected(){
+  if(!save) return;
+  // For multi-selection, focus on center of selected objects
+  if(multiSelection.length > 0){
+    let cx=0, cy=0, count=0;
+    multiSelection.forEach(s=>{
+      const p = getObjPos(s);
+      if(p){ cx+=p.x; cy+=p.y; count++; }
+    });
+    if(count>0){
+      cx/=count; cy/=count;
+      camera.x = cx - canvasW()/2/camera.zoom;
+      camera.y = cy - canvasH()/2/camera.zoom;
+    }
+    return;
+  }
+  if(!selection){centerOnPlayer();return;}
+  let pos = getObjPos(selection);
+  if(pos){
+    camera.x = pos.x - canvasW()/2/camera.zoom;
+    camera.y = pos.y - canvasH()/2/camera.zoom;
+  }
+}
+function getObjPos(sel){
+  if(!save) return null;
+  try{
+    const {type,index}=sel;
+    if(type==='player') return {x:save.playerX,y:save.playerY};
+    if(type==='entity') return {x:save.entities[index][E_X],y:save.entities[index][E_Y]};
+    if(type==='blackhole') return {x:save.blackHoles[index][BH_X],y:save.blackHoles[index][BH_Y]};
+    if(type==='wall') return {x:save.walls[index][W_X],y:save.walls[index][W_Y]};
+    if(type==='scattered') return {x:save.scatteredWords[index][S_X],y:save.scatteredWords[index][S_Y]};
+    if(type==='projectile') return {x:save.projectiles[index][P_X],y:save.projectiles[index][P_Y]};
+  }catch(e){}
+  return null;
+}
+
+// Select and jump camera to an object (used from sidebar)
+function selectAndFocus(type, index){
+  selection = {type, index};
+  multiSelection = [];
+  focusSelected();
+  switchTab('objects');
+}
+
+// ===================== HIT TESTING =====================
+// Check if a world-space point is within the drag/select area of a specific object
+function hitTestObj(sel, wx, wy){
+  if(!save) return false;
+  try{
+    const {type,index}=sel;
+    if(type==='player'){
+      const dx=wx-save.playerX,dy=wy-save.playerY;
+      const {hw,hh}=getPlayerHitHalf();
+      return Math.abs(dx)<hw && Math.abs(dy)<hh;
+    }
+    if(type==='entity'){
+      const e=save.entities[index]; if(!e) return false;
+      const dx=wx-e[E_X],dy=wy-e[E_Y];
+      const angle = -(e[E_ANGLE]||0)*Math.PI/180;
+      const ldx = dx*Math.cos(angle) - dy*Math.sin(angle);
+      const ldy = dx*Math.sin(angle) + dy*Math.cos(angle);
+      const {hw,hh} = getEntityHitHalf(e);
+      return Math.abs(ldx)<hw && Math.abs(ldy)<hh;
+    }
+    if(type==='blackhole'){
+      const bh=save.blackHoles[index]; if(!bh) return false;
+      const dx=wx-bh[BH_X],dy=wy-bh[BH_Y];
+      const r=getHitRadius('blackhole',bh);
+      return dx*dx+dy*dy < r*r;
+    }
+    if(type==='wall'){
+      const w=save.walls[index]; if(!w) return false;
+      const dx=wx-w[W_X],dy=wy-w[W_Y];
+      const {hw,hh} = getWallHitHalf(w);
+      return Math.abs(dx)<hw && Math.abs(dy)<hh;
+    }
+    if(type==='scattered'){
+      const s=save.scatteredWords[index]; if(!s) return false;
+      const dx=wx-s[S_X],dy=wy-s[S_Y];
+      const angle = -(s[S_ANGLE]||0)*Math.PI/180;
+      const ldx = dx*Math.cos(angle) - dy*Math.sin(angle);
+      const ldy = dx*Math.sin(angle) + dy*Math.cos(angle);
+      const {hw,hh} = getScatteredHitHalf(s);
+      return Math.abs(ldx)<hw && Math.abs(ldy)<hh;
+    }
+    if(type==='projectile'){
+      const p=save.projectiles[index]; if(!p) return false;
+      const dx=wx-p[P_X],dy=wy-p[P_Y];
+      const r=getHitRadius('projectile',p);
+      return dx*dx+dy*dy < r*r;
+    }
+  }catch(e){}
+  return false;
+}
+
+function hitTest(wx,wy){
+  if(!save) return null;
+  const threshold = 25 / camera.zoom;
+  // Collect all hits with their distances
+  let hits = [];
+
+  // Black holes
+  for(let i=save.blackHoles.length-1;i>=0;i--){
+    const bh=save.blackHoles[i];
+    let dx=wx-bh[BH_X],dy=wy-bh[BH_Y],d=dx*dx+dy*dy;
+    const r=getHitRadius('blackhole',bh);
+    if(d<r*r) hits.push({type:'blackhole',index:i,dist:d});
+  }
+
+  // Entities (OBB - rotated rectangle)
+  for(let i=save.entities.length-1;i>=0;i--){
+    const e=save.entities[i];
+    const dx=wx-e[E_X],dy=wy-e[E_Y];
+    const angle = -(e[E_ANGLE]||0)*Math.PI/180;
+    const ldx = dx*Math.cos(angle) - dy*Math.sin(angle);
+    const ldy = dx*Math.sin(angle) + dy*Math.cos(angle);
+    const {hw,hh} = getEntityHitHalf(e);
+    if(Math.abs(ldx)<hw && Math.abs(ldy)<hh){
+      hits.push({type:'entity',index:i,dist:dx*dx+dy*dy});
+    }
+  }
+
+  // Player (AABB rectangle, no rotation)
+  {const dx=wx-save.playerX,dy=wy-save.playerY;
+    const {hw,hh}=getPlayerHitHalf();
+    if(Math.abs(dx)<hw && Math.abs(dy)<hh) hits.push({type:'player',index:-1,dist:dx*dx+dy*dy});
+  }
+
+  // Walls (AABB - axis-aligned bounding box, ignoring rotation for easy clicking)
+  // Walls (AABB - axis-aligned bounding box, ignoring rotation for easy clicking)
+  for (let i = save.walls.length - 1; i >= 0; i--) {
+    const w = save.walls[i];
+    const dx = wx - w[W_X], dy = wy - w[W_Y];
+    const { hw, hh } = getWallHitHalf(w);
+    // 增加 10 像素的点击容错，让细墙也容易点中
+    if (Math.abs(dx) < hw + 10 && Math.abs(dy) < hh + 10) {
+      hits.push({ type: 'wall', index: i, dist: 0 });
+    }
+  }
+
+  // Scattered words (OBB - rotated rectangle)
+  for(let i=save.scatteredWords.length-1;i>=0;i--){
+    const s=save.scatteredWords[i];
+    const dx=wx-s[S_X],dy=wy-s[S_Y];
+    const angle = -(s[S_ANGLE]||0)*Math.PI/180;
+    const ldx = dx*Math.cos(angle) - dy*Math.sin(angle);
+    const ldy = dx*Math.sin(angle) + dy*Math.cos(angle);
+    const {hw,hh} = getScatteredHitHalf(s);
+    if(Math.abs(ldx)<hw && Math.abs(ldy)<hh){
+      hits.push({type:'scattered',index:i,dist:dx*dx+dy*dy});
+    }
+  }
+
+  // Projectiles
+  for(let i=save.projectiles.length-1;i>=0;i--){
+    const p=save.projectiles[i];
+    let dx=wx-p[P_X],dy=wy-p[P_Y],d=dx*dx+dy*dy;
+    const r=getHitRadius('projectile',p);
+    if(d<r*r) hits.push({type:'projectile',index:i,dist:d});
+  }
+
+  if(hits.length===0) return null;
+
+  // Black hole handling: they have large click areas that overlap with entities.
+  // If a black hole hit exists alongside entity hits, prefer the entity only if
+  // the click is much closer to the entity's center than the black hole's center.
+  // Otherwise, pick the black hole (since clicking inside a BH visual area usually
+  // means the user wants to interact with the BH).
+  const bhHits = hits.filter(h=>h.type==='blackhole');
+  const entityHits = hits.filter(h=>h.type!=='blackhole');
+  if(bhHits.length > 0 && entityHits.length > 0){
+    bhHits.sort((a,b)=>a.dist-b.dist);
+    entityHits.sort((a,b)=>a.dist-b.dist);
+    const closestBh = bhHits[0];
+    const closestEntity = entityHits[0];
+    // If entity is at least 2x closer than the BH center, pick the entity
+    if(closestEntity.dist * 4 < closestBh.dist){
+      return {type:closestEntity.type,index:closestEntity.index};
+    }
+    return {type:closestBh.type,index:closestBh.index};
+  }
+  if(bhHits.length > 0){
+    bhHits.sort((a,b)=>a.dist-b.dist);
+    return {type:bhHits[0].type,index:bhHits[0].index};
+  }
+
+  // Sort by distance for remaining object types
+  hits.sort((a,b)=>a.dist-b.dist);
+
+  // Apply threshold
+  const best = hits[0];
+  if(best.dist > threshold*threshold) return null;
+  return {type:best.type,index:best.index};
+}
+
+// Box selection: find all objects inside a world-space rectangle
+function hitTestRect(wx1,wy1,wx2,wy2){
+  if(!save) return [];
+  const minX=Math.min(wx1,wx2), maxX=Math.max(wx1,wx2);
+  const minY=Math.min(wy1,wy2), maxY=Math.max(wy1,wy2);
+  const results = [];
+
+  save.entities.forEach((e,i)=>{
+    const sz=e[E_SIZE]||20;
+    if(e[E_X]>=minX-sz && e[E_X]<=maxX+sz && e[E_Y]>=minY-sz && e[E_Y]<=maxY+sz)
+      results.push({type:'entity',index:i});
+  });
+  // Player (AABB: 48x48, half=24)
+  {const {hw,hh}=getPlayerHitHalf();
+  if(save.playerX>=minX-hw && save.playerX<=maxX+hw && save.playerY>=minY-hh && save.playerY<=maxY+hh)
+    results.push({type:'player',index:-1});}
+  save.blackHoles.forEach((bh,i)=>{
+    const r=bh[BH_ABS];
+    if(bh[BH_X]>=minX-r && bh[BH_X]<=maxX+r && bh[BH_Y]>=minY-r && bh[BH_Y]<=maxY+r)
+      results.push({type:'blackhole',index:i});
+  });
+  save.walls.forEach((w,i)=>{
+    const hw=w[W_WIDTH]/2, hh=w[W_HEIGHT]/2;
+    if(w[W_X]+hw>=minX && w[W_X]-hw<=maxX && w[W_Y]+hh>=minY && w[W_Y]-hh<=maxY)
+      results.push({type:'wall',index:i});
+  });
+  save.scatteredWords.forEach((s,i)=>{
+    const halfW = Math.max(15, String(s[S_WORD]).length * 8);
+    const halfH = 12;
+    if(s[S_X]+halfW>=minX && s[S_X]-halfW<=maxX && s[S_Y]+halfH>=minY && s[S_Y]-halfH<=maxY)
+      results.push({type:'scattered',index:i});
+  });
+  save.projectiles.forEach((p,i)=>{
+    if(p[P_X]>=minX && p[P_X]<=maxX && p[P_Y]>=minY && p[P_Y]<=maxY)
+      results.push({type:'projectile',index:i});
+  });
+  return results;
+}
+
+// Check if an object is in the current selection (single or multi)
+function isObjSelected(type, index){
+  if(selection && selection.type===type && selection.index===index) return true;
+  return multiSelection.some(s=>s.type===type && s.index===index);
+}
+
+// ===================== RESIZE & ROTATION HANDLE HIT TEST =====================
+// Wall resize handles: 4 corner squares
+function getWallHandleScreenPositions(w, z){
+  const s = worldToScreen(w[W_X], w[W_Y]);
+  const hw = w[W_WIDTH]/2*z, hh = w[W_HEIGHT]/2*z;
+  const angle = (w[W_ANGLE]||0)*Math.PI/180;
+  // Corners in local space (before rotation)
+  const corners = [
+    {key:'nw', lx:-hw, ly:-hh},
+    {key:'ne', lx:hw, ly:-hh},
+    {key:'sw', lx:-hw, ly:hh},
+    {key:'se', lx:hw, ly:hh},
+  ];
+  return corners.map(c=>{
+    const rx = c.lx*Math.cos(angle) - c.ly*Math.sin(angle);
+    const ry = c.lx*Math.sin(angle) + c.ly*Math.cos(angle);
+    return {key:c.key, sx:s.x+rx, sy:s.y+ry};
+  });
+}
+function hitTestResizeHandle(wx, wy){
+  if(!save || !selection || selection.type!=='wall') return null;
+  const w = save.walls[selection.index];
+  if(!w) return null;
+  const z = camera.zoom;
+  const handles = getWallHandleScreenPositions(w, z);
+  const threshold = 8 / z; // world-space threshold
+  for(const h of handles){
+    const hs = worldToScreen(wx, wy);
+    const dx = hs.x - h.sx, dy = hs.y - h.sy;
+    if(Math.abs(dx) < 8 && Math.abs(dy) < 8) return h.key;
+  }
+  return null;
+}
+
+// Rotation handle: small circle above the object
+function getRotationHandleScreenPos(sel){
+  if(!save || !sel) return null;
+  const z = camera.zoom;
+  let sx, sy, objAngle, handleOffset;
+  if(sel.type==='wall'){
+    const w = save.walls[sel.index]; if(!w) return null;
+    const s = worldToScreen(w[W_X], w[W_Y]);
+    sx=s.x; sy=s.y; objAngle=(w[W_ANGLE]||0)*Math.PI/180;
+    handleOffset = w[W_HEIGHT]/2*z + 20;
+  }else{
+    // Non-wall types: compute handle offset from hitbox dimensions
+    let obj=null;
+    if(sel.type==='entity'){
+      obj=save.entities[sel.index]; if(!obj) return null;
+      const s=worldToScreen(obj[E_X],obj[E_Y]); sx=s.x; sy=s.y;
+      objAngle=(obj[E_ANGLE]||0)*Math.PI/180;
+      const {hw,hh}=getEntityHitHalf(obj);
+      handleOffset = Math.max(hw,hh)*z + 20;
+    }
+    else if(sel.type==='player'){
+      const s=worldToScreen(save.playerX,save.playerY); sx=s.x; sy=s.y;
+      objAngle=(save.playerAngle||0)*Math.PI/180;
+      const {hw,hh}=getPlayerHitHalf();
+      handleOffset = Math.max(hw,hh)*z + 20;
+    }
+    else if(sel.type==='projectile'){
+      obj=save.projectiles[sel.index]; if(!obj) return null;
+      const s=worldToScreen(obj[P_X],obj[P_Y]); sx=s.x; sy=s.y;
+      objAngle=(obj[P_ANGLE]||0)*Math.PI/180;
+      handleOffset = getHitRadius('projectile',obj)*z + 20;
+    }
+    else if(sel.type==='scattered'){
+      obj=save.scatteredWords[sel.index]; if(!obj) return null;
+      const s=worldToScreen(obj[S_X],obj[S_Y]); sx=s.x; sy=s.y;
+      objAngle=(obj[S_ANGLE]||0)*Math.PI/180;
+      const {hw,hh}=getScatteredHitHalf(obj);
+      handleOffset = Math.max(hw,hh)*z + 20;
+    }
+    else return null;
+  }
+  // Handle is directly above the object in local space (rotated)
+  const hx = sx + Math.sin(objAngle) * (-handleOffset);
+  const hy = sy + Math.cos(objAngle) * handleOffset * (-1);
+  // Simplify: handle at (sx + sin(angle)*-offset, sy - cos(angle)*offset)
+  // Actually: "above" means in the -Y local direction, rotated by objAngle
+  const lx = 0, ly = -handleOffset;
+  const rx = lx*Math.cos(objAngle) - ly*Math.sin(objAngle);
+  const ry = lx*Math.sin(objAngle) + ly*Math.cos(objAngle);
+  return {sx: sx+rx, sy: sy+ry};
+}
+function hitTestRotationHandle(wx, wy){
+  if(!save || !selection) return null;
+  // Only for entity, wall, player, projectile, scattered
+  if(selection.type!=='entity' && selection.type!=='wall' && selection.type!=='player' && selection.type!=='projectile' && selection.type!=='scattered') return null;
+  const pos = getRotationHandleScreenPos(selection);
+  if(!pos) return null;
+  const hs = worldToScreen(wx, wy);
+  const dx = hs.x - pos.sx, dy = hs.y - pos.sy;
+  if(dx*dx + dy*dy < 12*12) return selection;
+  return null;
+}
+
+  canvas.addEventListener('mousedown', e => {
+    if (!save) return;
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const w = screenToWorld(sx, sy);
+
+    // ===== 鼠标中键/右键 = 平移 =====
+    if (e.button === 2 || e.button === 1) {
+      isPanning = true;
+      panStart = { x: e.clientX, y: e.clientY };
+      panCamStart = { x: camera.x, y: camera.y };
+      canvas.style.cursor = 'grabbing';
+      e.preventDefault();
+      return;
+    }
+
+    if (e.button === 0) {
+      // ===== 放置模式 =====
+      if (placementMode && !placementButtonHeld) {
+        placeObject(w.x, w.y);
+        return;
+      }
+      if (placementMode && placementButtonHeld) {
+        return;
+      }
+
+      // ===== Shift + 左键 = 框选 =====
+      if (e.shiftKey) {
+        isBoxSelecting = true;
+        boxStart = { x: sx, y: sy };
+        boxEnd = { x: sx, y: sy };
+        canvas.style.cursor = 'crosshair';
+        return;
+      }
+
+      // ===== 1️⃣ 最高优先级：检测箭头 ">" 拖拽 =====
+      const arrowHit = hitTestArrow(w.x, w.y);
+      if (arrowHit) {
+        isDraggingArrow = true;
+        arrowDragObj = arrowHit;
+        pushUndo();
+
+        // 记录起始角度 —— 支持所有类型
+        if (arrowHit.type === 'entity') {
+          arrowDragStartAngle = (save.entities[arrowHit.index][E_ANGLE] || 0) * Math.PI / 180;
+        } else if (arrowHit.type === 'scattered') {
+          arrowDragStartAngle = (save.scatteredWords[arrowHit.index][S_ANGLE] || 0) * Math.PI / 180;
+        } else if (arrowHit.type === 'projectile') {
+          arrowDragStartAngle = (save.projectiles[arrowHit.index][P_ANGLE] || 0) * Math.PI / 180;
+        } else if (arrowHit.type === 'wall') {
+          arrowDragStartAngle = (save.walls[arrowHit.index][W_ANGLE] || 0) * Math.PI / 180;
+        } else if (arrowHit.type === 'player') {
+          arrowDragStartAngle = (save.playerAngle || 0) * Math.PI / 180;
+        }
+
+        // 多选同步角度 —— 支持所有类型
+        arrowMultiStartAngles = multiSelection
+          .filter(s => s.type === 'entity' || s.type === 'projectile' || s.type === 'wall' || s.type === 'player' || s.type === 'scattered')
+          .map(s => {
+            let startAngle = 0;
+            if (s.type === 'entity') startAngle = save.entities[s.index][E_ANGLE] || 0;
+            else if (s.type === 'projectile') startAngle = save.projectiles[s.index][P_ANGLE] || 0;
+            else if (s.type === 'wall') startAngle = save.walls[s.index][W_ANGLE] || 0;
+            else if (s.type === 'player') startAngle = save.playerAngle || 0;
+            else if (s.type === 'scattered') startAngle = save.scatteredWords[s.index][S_ANGLE] || 0;
+            return { sel: s, startAngleDeg: startAngle };
+          });
+
+        if (!isObjSelected(arrowHit.type, arrowHit.index)) {
+          selection = arrowHit;
+          multiSelection = [];
+          arrowMultiStartAngles = [];
+        } else {
+          selection = arrowHit;
+        }
+        canvas.style.cursor = 'grab';
+        updateSidebar();
+        return;
+      }
+
+      // ===== 2️⃣ 检测旋转手柄 =====
+      if (selection) {
+        const rotHit = hitTestRotationHandle(w.x, w.y);
+        if (rotHit) {
+          isRotating = true;
+          rotateObj = rotHit;
+          pushUndo();
+          if (rotHit.type === 'entity') {
+            rotateStartAngle = save.entities[rotHit.index][E_ANGLE] || 0;
+          } else if (rotHit.type === 'wall') {
+            rotateStartAngle = save.walls[rotHit.index][W_ANGLE] || 0;
+          } else if (rotHit.type === 'player') {
+            rotateStartAngle = save.playerAngle || 0;
+          } else if (rotHit.type === 'projectile') {
+            rotateStartAngle = save.projectiles[rotHit.index][P_ANGLE] || 0;
+          } else if (rotHit.type === 'scattered') {
+            rotateStartAngle = save.scatteredWords[rotHit.index][S_ANGLE] || 0;
+          }
+          rotateMultiStartAngles = multiSelection
+            .filter(s => s.type === 'entity' || s.type === 'projectile' || s.type === 'wall' || s.type === 'player' || s.type === 'scattered')
+            .map(s => {
+              let startAngle = 0;
+              if (s.type === 'entity') startAngle = save.entities[s.index][E_ANGLE] || 0;
+              else if (s.type === 'projectile') startAngle = save.projectiles[s.index][P_ANGLE] || 0;
+              else if (s.type === 'wall') startAngle = save.walls[s.index][W_ANGLE] || 0;
+              else if (s.type === 'player') startAngle = save.playerAngle || 0;
+              else if (s.type === 'scattered') startAngle = save.scatteredWords[s.index][S_ANGLE] || 0;
+              return { sel: s, startAngleDeg: startAngle };
+            });
+          canvas.style.cursor = 'grab';
+          return;
+        }
+      }
+
+      // ===== 3️⃣ 检测墙的缩放手柄 =====
+      if (selection && selection.type === 'wall') {
+        const rh = hitTestResizeHandle(w.x, w.y);
+        if (rh) {
+          isResizing = true;
+          resizeHandle = rh;
+          pushUndo();
+          const wall = save.walls[selection.index];
+          resizeStartWorld = { x: w.x, y: w.y };
+          resizeStartDims = {
+            x: wall[W_X],
+            y: wall[W_Y],
+            w: wall[W_WIDTH],
+            h: wall[W_HEIGHT],
+            a: wall[W_ANGLE] || 0
+          };
+          resizeMultiStartDims = multiSelection
+            .filter(s => s.type === 'wall')
+            .map(s => {
+              const mw = save.walls[s.index];
+              return mw ? { sel: s, dims: { x: mw[W_X], y: mw[W_Y], w: mw[W_WIDTH], h: mw[W_HEIGHT] } } : null;
+            })
+            .filter(Boolean);
+          canvas.style.cursor = 'ns-resize';
+          return;
+        }
+      }
+
+      // ===== 4️⃣ 检测墙的拖拽（直接拖拽墙本身） =====
+      const hit = hitTest(w.x, w.y);
+      if (hit && hit.type === 'wall') {
+        selection = hit;
+        multiSelection = [];
+        isDragging = true;
+        pushUndo();
+        dragStartWorld = { x: w.x, y: w.y };
+        dragObjStartPos = getObjPos(selection);
+        canvas.style.cursor = 'move';
+        updateSidebar();
+        return;
+      }
+
+      // ===== 5️⃣ 检测当前选中的对象 =====
+      if (selection && hitTestObj(selection, w.x, w.y)) {
+        isDragging = true;
+        dragMultiStartPos = null;
+        pushUndo();
+        dragStartWorld = { x: w.x, y: w.y };
+        dragObjStartPos = getObjPos(selection);
+        canvas.style.cursor = 'move';
+        return;
+      }
+
+      // ===== 6️⃣ 检测多选对象中的任意一个 =====
+      if (multiSelection.length > 0) {
+        const clickedMulti = multiSelection.find(s => hitTestObj(s, w.x, w.y));
+        if (clickedMulti) {
+          selection = clickedMulti;
+          isDragging = true;
+          dragMultiStartPos = null;
+          pushUndo();
+          dragStartWorld = { x: w.x, y: w.y };
+          dragObjStartPos = getObjPos(selection);
+          canvas.style.cursor = 'move';
+          return;
+        }
+      }
+
+      // ===== 7️⃣ 检测其他对象 =====
+      if (hit) {
+        if (multiSelection.length > 0 && isObjSelected(hit.type, hit.index)) {
+          selection = hit;
+        } else {
+          selection = hit;
+          multiSelection = [];
+        }
+        if (hit.type === 'player' && currentTab !== 'player') {
+          switchTab('player');
+        } else if (hit.type !== 'player' && currentTab !== 'objects') {
+          switchTab('objects');
+        }
+        isDragging = true;
+        dragMultiStartPos = null;
+        pushUndo();
+        dragStartWorld = { x: w.x, y: w.y };
+        dragObjStartPos = getObjPos(selection);
+        canvas.style.cursor = 'move';
+      } else {
+        // ===== 点击空白：取消选中 =====
+        selection = null;
+        multiSelection = [];
+      }
+      updateSidebar();
+    }
+  });
+
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    mouseScreen = { x: sx, y: sy };
+    mouseWorld = screenToWorld(sx, sy);
+    document.getElementById('statCoord').textContent = Math.floor(mouseWorld.x) + ', ' + Math.floor(mouseWorld.y);
+
+    if (isBoxSelecting && boxStart) {
+      boxEnd = { x: sx, y: sy };
+      return;
+    }
+
+    if (isPanning && panStart) {
+      const dx = (e.clientX - panStart.x) / camera.zoom;
+      const dy = (e.clientY - panStart.y) / camera.zoom;
+      camera.x = panCamStart.x - dx;
+      camera.y = panCamStart.y - dy;
+      return;
+    }
+
+    // Rotation handle dragging
+    if (isRotating && rotateObj) {
+      const objPos = getObjPos(rotateObj);
+      if (objPos) {
+        const dx = mouseWorld.x - objPos.x;
+        const dy = mouseWorld.y - objPos.y;
+        let newAngle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+        if (e.shiftKey) newAngle = Math.round(newAngle / 15) * 15;
+        const angleDelta = newAngle - rotateStartAngle;
+        if (rotateObj.type === 'entity') {
+          save.entities[rotateObj.index][E_ANGLE] = newAngle;
+        } else if (rotateObj.type === 'wall') {
+          save.walls[rotateObj.index][W_ANGLE] = newAngle;
+        } else if (rotateObj.type === 'player') {
+          save.playerAngle = newAngle;
+        } else if (rotateObj.type === 'projectile') {
+          save.projectiles[rotateObj.index][P_ANGLE] = newAngle;
+        } else if (rotateObj.type === 'scattered') {
+          save.scatteredWords[rotateObj.index][S_ANGLE] = newAngle;
+        }
+        if (rotateMultiStartAngles && rotateMultiStartAngles.length > 0) {
+          rotateMultiStartAngles.forEach(item => {
+            if (item.sel.type === rotateObj.type && item.sel.index === rotateObj.index) return;
+            const newAngle2 = item.startAngleDeg + angleDelta;
+            if (item.sel.type === 'entity') {
+              save.entities[item.sel.index][E_ANGLE] = newAngle2;
+            } else if (item.sel.type === 'projectile') {
+              save.projectiles[item.sel.index][P_ANGLE] = newAngle2;
+            } else if (item.sel.type === 'wall') {
+              save.walls[item.sel.index][W_ANGLE] = newAngle2;
+            } else if (item.sel.type === 'player') {
+              save.playerAngle = newAngle2;
+            } else if (item.sel.type === 'scattered') {
+              save.scatteredWords[item.sel.index][S_ANGLE] = newAngle2;
+            }
+          });
+        }
+      }
+      return;
+    }
+
+    // Wall resize handle dragging
+    if (isResizing && resizeHandle && selection && selection.type === 'wall') {
+      const wall = save.walls[selection.index];
+      const angle = (resizeStartDims.a || 0) * Math.PI / 180;
+      const dx = mouseWorld.x - resizeStartWorld.x;
+      const dy = mouseWorld.y - resizeStartWorld.y;
+      const ldx = dx * Math.cos(-angle) - dy * Math.sin(-angle);
+      const ldy = dx * Math.sin(-angle) + dy * Math.cos(-angle);
+      let newW = resizeStartDims.w,
+        newH = resizeStartDims.h;
+      if (resizeHandle === 'ne') {
+        newW = Math.max(20, resizeStartDims.w + ldx * 2);
+        newH = Math.max(10, resizeStartDims.h - ldy * 2);
+      } else if (resizeHandle === 'nw') {
+        newW = Math.max(20, resizeStartDims.w - ldx * 2);
+        newH = Math.max(10, resizeStartDims.h - ldy * 2);
+      } else if (resizeHandle === 'se') {
+        newW = Math.max(20, resizeStartDims.w + ldx * 2);
+        newH = Math.max(10, resizeStartDims.h + ldy * 2);
+      } else if (resizeHandle === 'sw') {
+        newW = Math.max(20, resizeStartDims.w - ldx * 2);
+        newH = Math.max(10, resizeStartDims.h + ldy * 2);
+      }
+      if (e.shiftKey) {
+        newW = Math.round(newW / 5) * 5;
+        newH = Math.round(newH / 5) * 5;
+      }
+      wall[W_WIDTH] = newW;
+      wall[W_HEIGHT] = newH;
+      const dw = newW - resizeStartDims.w;
+      const dh = newH - resizeStartDims.h;
+      if (resizeMultiStartDims && resizeMultiStartDims.length > 1) {
+        resizeMultiStartDims.forEach(item => {
+          if (item.sel.type === selection.type && item.sel.index === selection.index) return;
+          const mw = save.walls[item.sel.index];
+          if (!mw) return;
+          mw[W_WIDTH] = Math.max(20, item.dims.w + dw);
+          mw[W_HEIGHT] = Math.max(10, item.dims.h + dh);
+        });
+      }
+      return;
+    }
+
+    // Arrow dragging - update angle direction
+    if (isDraggingArrow && arrowDragObj) {
+      const objPos = getObjPos(arrowDragObj);
+      if (objPos) {
+        const dx = mouseWorld.x - objPos.x;
+        const dy = mouseWorld.y - objPos.y;
+        const newAngleRad = Math.atan2(dy, dx);
+        const newAngleDeg = newAngleRad * 180 / Math.PI;
+        const finalAngle = e.shiftKey ? Math.round(newAngleDeg / 15) * 15 : newAngleDeg;
+        const angleDelta = finalAngle - (arrowDragStartAngle * 180 / Math.PI);
+
+        // 更新角度 — 支持所有类型（包括 wall）
+        if (arrowDragObj.type === 'entity') {
+          save.entities[arrowDragObj.index][E_ANGLE] = finalAngle;
+        } else if (arrowDragObj.type === 'scattered') {
+          save.scatteredWords[arrowDragObj.index][S_ANGLE] = finalAngle;
+        } else if (arrowDragObj.type === 'projectile') {
+          save.projectiles[arrowDragObj.index][P_ANGLE] = finalAngle;
+        } else if (arrowDragObj.type === 'wall') {
+          save.walls[arrowDragObj.index][W_ANGLE] = finalAngle;
+        } else if (arrowDragObj.type === 'player') {
+          save.playerAngle = finalAngle;
+        }
+
+        // 多选同步角度 — 支持所有类型
+        if (arrowMultiStartAngles && arrowMultiStartAngles.length > 0) {
+          arrowMultiStartAngles.forEach(item => {
+            if (item.sel.type === arrowDragObj.type && item.sel.index === arrowDragObj.index) return;
+            const newAngle = item.startAngleDeg + angleDelta;
+            if (item.sel.type === 'entity') {
+              save.entities[item.sel.index][E_ANGLE] = newAngle;
+            } else if (item.sel.type === 'projectile') {
+              save.projectiles[item.sel.index][P_ANGLE] = newAngle;
+            } else if (item.sel.type === 'wall') {
+              save.walls[item.sel.index][W_ANGLE] = newAngle;
+            } else if (item.sel.type === 'player') {
+              save.playerAngle = newAngle;
+            } else if (item.sel.type === 'scattered') {
+              save.scatteredWords[item.sel.index][S_ANGLE] = newAngle;
+            }
+          });
+        }
+      }
+      return;
+    }
+
+    if (isDragging && selection && dragObjStartPos) {
+      const dx = mouseWorld.x - dragStartWorld.x;
+      const dy = mouseWorld.y - dragStartWorld.y;
+      setObjPos(selection, dragObjStartPos.x + dx, dragObjStartPos.y + dy);
+      if (multiSelection.length > 0) {
+        if (!dragMultiStartPos) {
+          dragMultiStartPos = multiSelection.map(s => ({ sel: s, pos: getObjPos(s) }));
+        }
+        dragMultiStartPos.forEach(item => {
+          if (item.pos && !(item.sel.type === selection.type && item.sel.index === selection.index)) {
+            setObjPos(item.sel, item.pos.x + dx, item.pos.y + dy);
+          }
+        });
+      }
+      return;
+    }
+
+    // Tooltip
+    if (save) {
+      const hit = hitTest(mouseWorld.x, mouseWorld.y);
+      hoveredObj = hit;
+      const tooltip = document.getElementById('tooltip');
+      if (hit) {
+        let text = '';
+        if (hit.type === 'player') {
+          text = `[Player] at (${Math.floor(save.playerX)}, ${Math.floor(save.playerY)})`;
+        } else if (hit.type === 'entity') {
+          const e = save.entities[hit.index];
+          text = `[${TYPE_NAMES[e[E_TYPE]] || '?'}] "${e[E_WORD]}" (${Math.floor(e[E_X])}, ${Math.floor(e[E_Y])})`;
+        } else if (hit.type === 'blackhole') {
+          const bh = save.blackHoles[hit.index];
+          text = `[BlackHole] mass=${bh[BH_MASS].toFixed(1)} (${Math.floor(bh[BH_X])}, ${Math.floor(bh[BH_Y])})`;
+        } else if (hit.type === 'wall') {
+          const w = save.walls[hit.index];
+          text = `[Wall] "${w[W_WORD]}" (${Math.floor(w[W_X])}, ${Math.floor(w[W_Y])})`;
+        } else if (hit.type === 'scattered') {
+          const s = save.scatteredWords[hit.index];
+          text = `[Scattered] "${s[S_WORD]}" (${Math.floor(s[S_X])}, ${Math.floor(s[S_Y])})`;
+        } else if (hit.type === 'projectile') {
+          const p = save.projectiles[hit.index];
+          text = `[Projectile] "${p[P_WORD]}" (${Math.floor(p[P_X])}, ${Math.floor(p[P_Y])})`;
+        }
+        tooltip.textContent = text;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top = (e.clientY + 14) + 'px';
+      } else {
+        tooltip.style.display = 'none';
+      }
+    }
+  });
+
+canvas.addEventListener('mouseup', e=>{
+  if(isBoxSelecting && boxStart && boxEnd){
+    // Check if user actually dragged a meaningful distance (not just clicked)
+    const dragDist = Math.abs(boxEnd.x - boxStart.x) + Math.abs(boxEnd.y - boxStart.y);
+    if(dragDist < 5){
+      // Just a click on empty area — deselect only
+      selection = null;
+      multiSelection = [];
+    } else {
+      // Finalize box selection
+      const w1 = screenToWorld(boxStart.x, boxStart.y);
+      const w2 = screenToWorld(boxEnd.x, boxEnd.y);
+      const results = hitTestRect(w1.x, w1.y, w2.x, w2.y);
+      if(results.length > 0){
+        if(results.length === 1){
+          selection = results[0];
+          multiSelection = [];
+        } else {
+          selection = results[0]; // first as primary
+          multiSelection = results;
+        }
+      } else {
+        selection = null;
+        multiSelection = [];
+      }
+    }
+    isBoxSelecting = false;
+    boxStart = null;
+    boxEnd = null;
+    canvas.style.cursor = 'crosshair';
+    updateSidebar();
+    return;
+  }
+
+  if(isDragging){
+    isDragging = false;
+    dragMultiStartPos = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+  if(isDraggingArrow){
+    isDraggingArrow = false;
+    arrowDragObj = null;
+    arrowMultiStartAngles = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+  if(isRotating){
+    isRotating = false;
+    rotateObj = null;
+    rotateMultiStartAngles = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+  if(isResizing){
+    isResizing = false;
+    resizeHandle = null;
+    resizeMultiStartDims = null;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+    updateSidebar();
+  }
+  if(isPanning){
+    isPanning = false;
+    canvas.style.cursor = placementMode ? 'cell' : 'crosshair';
+  }
+});
+
+canvas.addEventListener('mouseleave', ()=>{
+  document.getElementById('tooltip').style.display='none';
+  isPanning=false;isBoxSelecting=false;
+  // Don't break active drags on mouseleave — let global mouseup handle them
+  if(!isDragging && !isDraggingArrow && !isRotating && !isResizing){
+    // No active drag, safe to reset everything
+  }
+  // isDragging, isDraggingArrow, isRotating, isResizing continue via global mousemove/mouseup
+  boxStart=null;boxEnd=null;
+  canvas.style.cursor=placementMode?'cell':'crosshair';
+});
+
+canvas.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left;
+  const sy = e.clientY - rect.top;
+  const wBefore = screenToWorld(sx, sy);
+  const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+  camera.zoom = Math.max(0.02, Math.min(20, camera.zoom * factor));
+  const wAfter = screenToWorld(sx, sy);
+  camera.x += wBefore.x - wAfter.x;
+  camera.y += wBefore.y - wAfter.y;
+  document.getElementById('statZoom').textContent = Math.round(camera.zoom*100)+'%';
+  document.getElementById('zoomInfo').textContent = Math.round(camera.zoom*100)+'%';
+}, {passive:false});
+
+canvas.addEventListener('contextmenu', e=>e.preventDefault());
+
+document.addEventListener('keydown', e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+  if(e.key==='Delete'||e.key==='Backspace'){deleteSelected();e.preventDefault();}
+  if(e.key==='Escape'){
+    if(placementMode){ cancelPlacement(); }
+    else{ selection=null; multiSelection=[]; }
+    updateSidebar();
+  }
+  if(e.key==='g'||e.key==='G'){showGrid=!showGrid;}
+  if(e.key==='f'||e.key==='F'){focusSelected();}
+  if(e.key==='m'||e.key==='M'){toggleSidebar();}
+  if(e.key==='l'||e.key==='L'){toggleToolbar();}
+  if(e.key==='i'||e.key==='I'){toggleMinimap();}
+  if(e.key==='e'||e.key==='E'){quickCreate('entity');}
+  if(e.key==='p'||e.key==='P'){quickCreate('projectile');}
+  if(e.key==='o'||e.key==='O'){quickCreate('blackhole');}
+  if(e.key==='s'||e.key==='S' && !e.ctrlKey){quickCreate('scattered');}
+  if(e.key==='w'||e.key==='W'){quickCreate('wall');}
+  if(e.ctrlKey && e.key==='z'){doUndo();e.preventDefault();}
+  if(e.ctrlKey && e.key==='c'){copySelected();e.preventDefault();}
+  if(e.ctrlKey && e.key==='v'){pasteClipboard();e.preventDefault();}
+});
+
+// ===================== SET OBJ POS =====================
+let sidebarHidden = false;
+function toggleSidebar(){
+  sidebarHidden = !sidebarHidden;
+  const sb = document.getElementById('sidebar');
+  sb.style.display = sidebarHidden ? 'none' : '';
+  setTimeout(resizeCanvas, 50);
+}
+
+let toolbarHidden = false;
+function toggleToolbar(){
+  toolbarHidden = !toolbarHidden;
+  const tb = document.getElementById('toolbar');
+  tb.style.display = toolbarHidden ? 'none' : '';
+  setTimeout(resizeCanvas, 50);
+}
+
+let minimapHidden = false;
+function toggleMinimap(){
+  minimapHidden = !minimapHidden;
+  const mm = document.getElementById('minimap');
+  mm.style.display = minimapHidden ? 'none' : '';
+}
+
+function setObjPos(sel, nx, ny){
+  if(!save) return;
+  const {type,index}=sel;
+  if(type==='player'){save.playerX=nx;save.playerY=ny;}
+  else if(type==='entity'){save.entities[index][E_X]=nx;save.entities[index][E_Y]=ny;}
+  else if(type==='blackhole'){save.blackHoles[index][BH_X]=nx;save.blackHoles[index][BH_Y]=ny;}
+  else if(type==='scattered'){save.scatteredWords[index][S_X]=nx;save.scatteredWords[index][S_Y]=ny;}
+  else if(type==='projectile'){save.projectiles[index][P_X]=nx;save.projectiles[index][P_Y]=ny;}
+  else if (type === 'wall') { save.walls[index][W_X] = nx; save.walls[index][W_Y] = ny; }
+}
+
+// ===================== ANGLE ARROW DRAWING =====================
+// Draw a white ">" character rotated to show object's facing angle
+// Returns screen position of the ">" for hit testing
+function drawAngleArrow(sx, sy, angleDeg, zoom, offset){
+  const angle = angleDeg * Math.PI / 180;
+
+  // Position the ">" character outside the object
+  const dist = offset + 32*zoom;
+  const ax = sx + Math.cos(angle) * dist;
+  const ay = sy + Math.sin(angle) * dist;
+  const fontSize = Math.max(32, 64*zoom);
+
+  // Draw white ">" character rotated to facing angle
+  ctx.save();
+  ctx.translate(ax, ay);
+  ctx.rotate(angle);
+  ctx.font = `bold ${fontSize}px "Segoe UI",system-ui,sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.shadowColor = 'rgba(0,0,0,0.9)';
+  ctx.shadowBlur = 4;
+  ctx.fillText('>', 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+
+  return {x: ax, y: ay, size: fontSize};
+}
+
+// Hit test for angle arrow ">" - returns the object if mouse is near its ">"
+function hitTestArrow(wx, wy){
+  if(!save) return null;
+  const threshold = 30 / camera.zoom;
+  const z = camera.zoom;
+
+  // Check entities
+  for(let i=save.entities.length-1;i>=0;i--){
+    const e = save.entities[i];
+    const s = worldToScreen(e[E_X], e[E_Y]);
+    const {hw,hh} = getEntityHitHalf(e);
+    const hitR = Math.max(hw,hh)*z;
+    const angle = (e[E_ANGLE]||0) * Math.PI / 180;
+    const arrowDist = hitR + 32*z;
+    const ax = s.x + Math.cos(angle) * arrowDist;
+    const ay = s.y + Math.sin(angle) * arrowDist;
+    const aw = screenToWorld(ax, ay);
+    const dx = wx-aw.x, dy = wy-aw.y;
+    if(dx*dx+dy*dy < threshold*threshold) return {type:'entity',index:i};
+  }
+  // Check scattered words arrow
+  for(let i=save.scatteredWords.length-1;i>=0;i--){
+    const s2 = save.scatteredWords[i];
+    const s = worldToScreen(s2[S_X], s2[S_Y]);
+    const {hw,hh} = getScatteredHitHalf(s2);
+    const hitR = Math.max(hw,hh)*z;
+    const angle = (s2[S_ANGLE]||0) * Math.PI / 180;
+    const arrowDist = hitR + 32*z;
+    const ax = s.x + Math.cos(angle) * arrowDist;
+    const ay = s.y + Math.sin(angle) * arrowDist;
+    const aw = screenToWorld(ax, ay);
+    const dx = wx-aw.x, dy = wy-aw.y;
+    if(dx*dx+dy*dy < threshold*threshold) return {type:'scattered',index:i};
+  }
+  // Check projectiles
+  for(let i=save.projectiles.length-1;i>=0;i--){
+    const p = save.projectiles[i];
+    const s = worldToScreen(p[P_X], p[P_Y]);
+    const hitR = getHitRadius('projectile',p)*z;
+    const angle = (p[P_ANGLE]||0) * Math.PI / 180;
+    const arrowDist = hitR + 32*z;
+    const ax = s.x + Math.cos(angle) * arrowDist;
+    const ay = s.y + Math.sin(angle) * arrowDist;
+    const aw = screenToWorld(ax, ay);
+    const dx = wx-aw.x, dy = wy-aw.y;
+    if(dx*dx+dy*dy < threshold*threshold) return {type:'projectile',index:i};
+  }
+  // Check player
+  {
+    const s = worldToScreen(save.playerX, save.playerY);
+    const {hw,hh}=getPlayerHitHalf();
+    const hitR = Math.max(hw,hh)*z;
+    const angle = (save.playerAngle||0) * Math.PI / 180;
+    const arrowDist = hitR + 32*z;
+    const ax = s.x + Math.cos(angle) * arrowDist;
+    const ay = s.y + Math.sin(angle) * arrowDist;
+    const aw = screenToWorld(ax, ay);
+    const dx = wx-aw.x, dy = wy-aw.y;
+    if(dx*dx+dy*dy < threshold*threshold) return {type:'player'};
+  }
+  // Check walls
+  // Check walls — 始终可拖，不需要选中
+  for (let i = save.walls.length - 1; i >= 0; i--) {
+    const w = save.walls[i];
+    // 删除 if(!isObjSelected('wall',i)) continue; 
+    const s = worldToScreen(w[W_X], w[W_Y]);
+    const hitR = Math.max(w[W_WIDTH], w[W_HEIGHT]) / 2 * z;
+    const angle = (w[W_ANGLE] || 0) * Math.PI / 180;
+    const arrowDist = hitR + 32 * z;
+    const ax = s.x + Math.cos(angle) * arrowDist;
+    const ay = s.y + Math.sin(angle) * arrowDist;
+    const aw = screenToWorld(ax, ay);
+    const dx = wx - aw.x, dy = wy - aw.y;
+    if (dx * dx + dy * dy < threshold * threshold) return { type: 'wall', index: i };
+  }
+  return null;
+}
+
+// ===================== HITBOX DIMENSIONS (shared by rendering + click detection) =====================
+// Returns world-space hitbox radius for circular objects (blackhole, projectile)
+function getHitRadius(type, obj){
+  if(type==='blackhole') return Math.max(obj[BH_ABS]+30, 60);
+  if(type==='projectile') return 30;
+  return 25;
+}
+// Returns world-space AABB half-dimensions for player
+// Game uses AABB: PLAYER_WIDTH=48, PLAYER_HEIGHT=48 (no rotation)
+function getPlayerHitHalf(){
+  return {hw: 24, hh: 24}; // 48/2 = 24
+}
+// Returns world-space OBB half-dimensions for rectangular objects (entity)
+// Game uses checkOBBCollision(e.x, e.y, e.size*2, e.size*2, e.angle)
+function getEntityHitHalf(e){
+  const sz = e[E_SIZE]||20;
+  return {hw: sz, hh: sz}; // size*2 full width => half = size
+}
+// Returns world-space OBB half-dimensions for scattered words
+// Game uses AABB: wordWidth = max(20, min(80, charLen*10)), wordHeight = 26
+function getScatteredHitHalf(s){
+  const charLen = String(s[S_WORD]).length;
+  const wordWidth = Math.max(20, Math.min(80, charLen * 10));
+  const wordHeight = 26;
+  return {hw: wordWidth/2, hh: wordHeight/2};
+}
+// Returns world-space AABB half-dimensions for wall (ignoring rotation, as requested)
+function getWallHitHalf(w){
+  const hw = w[W_WIDTH]/2;
+  const hh = w[W_HEIGHT]/2;
+  const angle = (w[W_ANGLE]||0) * Math.PI / 180;
+  const cosA = Math.abs(Math.cos(angle));
+  const sinA = Math.abs(Math.sin(angle));
+  // AABB of rotated rectangle
+  return {hw: hw*cosA + hh*sinA, hh: hw*sinA + hh*cosA};
+}
+
+// ===================== COLLISION HITBOX DRAWING =====================
+// Draw OBB (Oriented Bounding Box) for entities — the game uses checkOBBCollision
+// with size = e[E_SIZE]*2, rotated by e[E_ANGLE]
+function drawOBBHitbox(sx, sy, halfW, halfH, angleDeg, fillColor, strokeColor, isSelected){
+  halfW = Math.max(2, halfW);
+  halfH = Math.max(2, halfH);
+  ctx.save();
+  ctx.translate(sx, sy);
+  ctx.rotate(angleDeg * Math.PI / 180);
+  ctx.fillStyle = fillColor;
+  ctx.fillRect(-halfW, -halfH, halfW*2, halfH*2);
+  ctx.strokeStyle = isSelected ? '#6c8aff' : strokeColor;
+  ctx.lineWidth = isSelected ? 2 : 1;
+  ctx.strokeRect(-halfW, -halfH, halfW*2, halfH*2);
+  ctx.restore();
+}
+
+// Draw collision circle for scattered words / projectiles (game uses circular checkCollision)
+function drawHitbox(sx, sy, radius, fillColor, strokeColor, isSelected){
+  const r = Math.max(2, radius);
+  ctx.fillStyle = fillColor;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle = isSelected ? '#6c8aff' : strokeColor;
+  ctx.lineWidth = isSelected ? 2 : 1;
+  ctx.beginPath();
+  ctx.arc(sx, sy, r, 0, Math.PI*2);
+  ctx.stroke();
+}
+
+// ===================== RENDERING =====================
+function draw(){
+  ctx.clearRect(0,0,canvasW(),canvasH());
+  ctx.fillStyle='#000';
+  ctx.fillRect(0,0,canvasW(),canvasH());
+
+  if(!save){
+    requestAnimationFrame(draw);
+    return;
+  }
+
+  const z = camera.zoom;
+
+  // World area
+  const tl = worldToScreen(0,0);
+  const br = worldToScreen(save.worldWidth, save.worldHeight);
+  ctx.fillStyle='#000';
+  ctx.fillRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+
+  // Grid
+  if(showGrid && z > 0.08){
+    ctx.strokeStyle='rgba(255,255,255,0.04)';
+    ctx.lineWidth=1;
+    let gridSize = 1000;
+    if(z>0.5) gridSize=500;
+    if(z>2) gridSize=200;
+    if(z>5) gridSize=100;
+    const startX = Math.floor(camera.x/gridSize)*gridSize;
+    const startY = Math.floor(camera.y/gridSize)*gridSize;
+    const endX = camera.x + canvasW()/z;
+    const endY = camera.y + canvasH()/z;
+    ctx.beginPath();
+    for(let gx=startX;gx<=endX;gx+=gridSize){const sx=(gx-camera.x)*z;ctx.moveTo(sx,0);ctx.lineTo(sx,canvasH());}
+    for(let gy=startY;gy<=endY;gy+=gridSize){const sy=(gy-camera.y)*z;ctx.moveTo(0,sy);ctx.lineTo(canvasW(),sy);}
+    ctx.stroke();
+  }
+
+  // World border
+  ctx.strokeStyle='rgba(255,100,100,0.3)';
+  ctx.lineWidth=2;
+  ctx.strokeRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+
+  // === Black Holes ===
+  save.blackHoles.forEach((bh,i)=>{
+    const s = worldToScreen(bh[BH_X], bh[BH_Y]);
+    const absR = bh[BH_ABS]*z;
+    const rocheR = bh[BH_ABS]*2.5*z;
+    const isSel = isObjSelected('blackhole',i);
+    const hitR = getHitRadius('blackhole',bh)*z;
+
+    // Click-area hitbox circle
+    drawHitbox(s.x, s.y, hitR, 'rgba(48,48,48,0.08)', 'rgba(64,64,64,0.4)', isSel);
+
+    // Influence radius rings (gray - outermost)
+    for(let ring=4;ring>=1;ring--){
+      const r = absR*(1+ring*0.8);
+      ctx.strokeStyle=`rgba(128,128,128,${0.12/ring})`;
+      ctx.lineWidth=1;
+      ctx.beginPath();ctx.arc(s.x,s.y,r,0,Math.PI*2);ctx.stroke();
+    }
+    // Roche limit (dark gray - dashed)
+    if(rocheR>5){
+      ctx.strokeStyle='rgba(64,64,64,0.6)';
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.arc(s.x,s.y,rocheR,0,Math.PI*2);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Absorption radius (deep gray fill + stroke)
+    const grad = ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,Math.max(1,absR));
+    grad.addColorStop(0,'rgba(48,48,48,0.5)');
+    grad.addColorStop(0.7,'rgba(40,40,40,0.3)');
+    grad.addColorStop(1,'rgba(32,32,32,0)');
+    ctx.fillStyle=grad;
+    ctx.beginPath();ctx.arc(s.x,s.y,Math.max(1,absR),0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle = isSel ? '#6c8aff' : 'rgba(64,64,64,0.7)';
+    ctx.lineWidth = isSel ? 2 : 1;
+    ctx.beginPath();ctx.arc(s.x,s.y,Math.max(1,absR),0,Math.PI*2);ctx.stroke();
+
+    // Core dot
+    ctx.fillStyle='rgba(80,80,80,0.9)';
+    ctx.beginPath();ctx.arc(s.x,s.y,Math.max(2,4*z),0,Math.PI*2);ctx.fill();
+
+    if(z>0.15){
+      ctx.font=`${Math.max(9,10*z)}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle='rgba(128,128,128,0.8)';
+      ctx.textAlign='center';
+      ctx.fillText(`BH m=${bh[BH_MASS].toFixed(1)}`,s.x,s.y-absR-6*z);
+    }
+  });
+
+  // === Walls ===
+  save.walls.forEach((w,i)=>{
+    const s = worldToScreen(w[W_X], w[W_Y]);
+    const hw=w[W_WIDTH]/2*z, hh=w[W_HEIGHT]/2*z;
+    if(s.x+hw<-50||s.x-hw>canvasW()+50||s.y+hh<-50||s.y-hh>canvasH()+50) return;
+    const isSel = isObjSelected('wall',i);
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    if(w[W_ANGLE]) ctx.rotate(w[W_ANGLE]*Math.PI/180);
+    // Collision hitbox (rectangular)
+    ctx.fillStyle = isSel ? 'rgba(108,138,255,0.1)' : 'rgba(200,200,200,0.06)';
+    ctx.fillRect(-hw,-hh,hw*2,hh*2);
+    ctx.strokeStyle = isSel ? '#6c8aff' : 'rgba(200,200,200,0.3)';
+    ctx.lineWidth = isSel ? 2 : 1;
+    ctx.strokeRect(-hw,-hh,hw*2,hh*2);
+    const fontSize = Math.max(8, 14*z);
+    ctx.font=`${fontSize}px "Segoe UI",system-ui,sans-serif`;
+    ctx.fillStyle=isSel?'#6c8aff':'#fff';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    const word=w[W_WORD];
+    const maxCharsPerLine = Math.max(1, Math.floor(w[W_WIDTH]/9));
+    if(word.length>maxCharsPerLine){
+      const lines=[];
+      for(let c=0;c<word.length;c+=maxCharsPerLine) lines.push(word.slice(c,c+maxCharsPerLine));
+      const lh=fontSize*1.2;
+      const startY=-(lines.length-1)*lh/2;
+      lines.forEach((line,li)=>ctx.fillText(line,0,startY+li*lh));
+    }else{ ctx.fillText(word,0,0); }
+    ctx.restore();
+    // Angle arrow for wall rotation
+    // Angle arrow for wall rotation — 始终显示
+    drawAngleArrow(s.x, s.y, w[W_ANGLE] || 0, z, Math.max(hw, hh));
+  });
+
+  // === Scattered Words ===
+  if(z>0.1){
+    save.scatteredWords.forEach((w,i)=>{
+      const s=worldToScreen(w[S_X],w[S_Y]);
+      if(s.x<-200||s.x>canvasW()+200||s.y<-200||s.y>canvasH()+200) return;
+      const isSel = isObjSelected('scattered',i);
+      const angleDeg = w[S_ANGLE]||0;
+      const fontSize = Math.max(10, 18*z);
+      const {hw,hh} = getScatteredHitHalf(w);
+      const screenHW=hw*z, screenHH=hh*z;
+      // Collision hitbox rectangle (OBB, matches hitTest)
+      drawOBBHitbox(s.x, s.y, screenHW, screenHH, angleDeg, 'rgba(255,255,255,0.05)', 'rgba(255,255,255,0.25)', isSel);
+      // Text with rotation
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(angleDeg*Math.PI/180);
+      ctx.font=`${fontSize}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle=isSel?'#6c8aff':'#fff';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(w[S_WORD],0,0);
+      ctx.restore();
+      drawAngleArrow(s.x, s.y, angleDeg, z, Math.max(screenHW, screenHH));
+    });
+  }
+
+  // === Projectiles ===
+  if(z>0.1){
+    save.projectiles.forEach((p,i)=>{
+      const s=worldToScreen(p[P_X],p[P_Y]);
+      if(s.x<-80||s.x>canvasW()+80||s.y<-80||s.y>canvasH()+80) return;
+      const fontSize=Math.max(7,14*z);
+      const isSel = isObjSelected('projectile',i);
+      const hitR = getHitRadius('projectile',p)*z;
+      // Click-area hitbox circle
+      drawHitbox(s.x, s.y, hitR, 'rgba(255,221,68,0.06)', 'rgba(255,221,68,0.35)', isSel);
+      // Text with rotation
+      ctx.save();
+      ctx.translate(s.x,s.y);
+      ctx.rotate((p[P_ANGLE]||0)*Math.PI/180);
+      ctx.font=`${fontSize}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle=isSel?'#6c8aff':'#fff';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(p[P_WORD],0,0);
+      ctx.restore();
+      drawAngleArrow(s.x, s.y, p[P_ANGLE]||0, z, hitR);
+    });
+  }
+
+  // === Entities (with collision hitbox visualization) ===
+  save.entities.forEach((e,i)=>{
+    const s=worldToScreen(e[E_X],e[E_Y]);
+    const sz=e[E_SIZE]||20;
+    const {hw,hh}=getEntityHitHalf(e);
+    const screenHW=hw*z, screenHH=hh*z;
+    if(s.x+screenHW<-80||s.x-screenHW>canvasW()+80||s.y+screenHH<-80||s.y-screenHH>canvasH()+80) return;
+
+    const eType = e[E_TYPE];
+    let hitboxInfo;
+    if(eType===ENTITY_TYPE.NUMBER){
+      hitboxInfo = getNumberHitboxColor(parseInt(e[E_WORD]));
+    }else{
+      hitboxInfo = HITBOX_COLORS[eType] || {fill:'rgba(255,255,255,0.08)',stroke:'rgba(255,255,255,0.35)',label:'#fff'};
+    }
+
+    const fontSize = Math.max(8, sz*z);
+    const isSel = isObjSelected('entity',i);
+
+    // Collision hitbox rectangle (OBB, matches hitTest)
+    drawOBBHitbox(s.x, s.y, screenHW, screenHH, e[E_ANGLE]||0, hitboxInfo.fill, hitboxInfo.stroke, isSel);
+
+    // Draw text with rotation
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    const angleRad = (e[E_ANGLE]||0)*Math.PI/180;
+    ctx.rotate(angleRad);
+    ctx.font=`${fontSize}px "Segoe UI",system-ui,sans-serif`;
+    ctx.fillStyle = isSel ? '#6c8aff' : hitboxInfo.label;
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(e[E_WORD],0,0);
+    ctx.restore();
+
+    // Type indicator dot at low zoom
+    if(z<0.3){
+      ctx.fillStyle=hitboxInfo.label;
+      ctx.beginPath();ctx.arc(s.x,s.y,3,0,Math.PI*2);ctx.fill();
+    }
+
+    // Can-ability badges at medium+ zoom
+    if(z>0.6 && eType===ENTITY_TYPE.NORMAL){
+      const badges=[];
+      if(e[E_CAN_THROW]) badges.push('T');
+      if(e[E_CAN_COMB]) badges.push('C');
+      if(e[E_CAN_WALL]) badges.push('W');
+      if(e[E_CAN_ATK]) badges.push('A');
+      if(badges.length>0){
+        ctx.font=`${Math.max(7,8*z)}px "Segoe UI",system-ui,sans-serif`;
+        ctx.fillStyle='rgba(255,200,100,0.7)';
+        ctx.textAlign='center';
+        ctx.fillText(badges.join(''),s.x,s.y+screenHH+8*z);
+      }
+    }
+    drawAngleArrow(s.x, s.y, e[E_ANGLE]||0, z, Math.max(screenHW, screenHH));
+  });
+
+  // === Player ===
+  {
+    const s=worldToScreen(save.playerX, save.playerY);
+    const {hw,hh}=getPlayerHitHalf();
+    const screenHW=hw*z, screenHH=hh*z;
+    const isSel = isObjSelected('player');
+
+    // Collision hitbox rectangle (AABB, no rotation — matches hitTest)
+    drawOBBHitbox(s.x, s.y, screenHW, screenHH, 0, 'rgba(68,255,136,0.08)', 'rgba(68,255,136,0.4)', isSel);
+
+    // Player text
+    ctx.save();
+    ctx.translate(s.x,s.y);
+    ctx.rotate((save.playerAngle||0)*Math.PI/180);
+    ctx.font=`${Math.max(10,24*z)}px "Segoe UI",system-ui,sans-serif`;
+    ctx.fillStyle=isSel?'#6c8aff':'#fff';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('-',0,0);
+    ctx.restore();
+
+    // Angle arrow ">"
+    drawAngleArrow(s.x, s.y, save.playerAngle||0, z, Math.max(screenHW, screenHH));
+  }
+
+  // === Selection Handles (resize + rotation) ===
+  if(selection){
+    // Wall resize handles
+    if(selection.type==='wall'){
+      const w = save.walls[selection.index];
+      if(w){
+        const handles = getWallHandleScreenPositions(w, z);
+        handles.forEach(h=>{
+          ctx.fillStyle='#6c8aff';
+          ctx.strokeStyle='#fff';
+          ctx.lineWidth=1;
+          ctx.fillRect(h.sx-4, h.sy-4, 8, 8);
+          ctx.strokeRect(h.sx-4, h.sy-4, 8, 8);
+        });
+        // Show dimensions text
+        const s = worldToScreen(w[W_X], w[W_Y]);
+        ctx.font='10px "Segoe UI",system-ui,sans-serif';
+        ctx.fillStyle='rgba(108,138,255,0.9)';
+        ctx.textAlign='center';
+        ctx.fillText(`${Math.round(w[W_WIDTH])}x${Math.round(w[W_HEIGHT])}`, s.x, s.y - w[W_HEIGHT]/2*z - 12);
+      }
+    }
+
+    // Rotation handle removed - use ">" arrow to change angle instead
+  }
+
+  // === Placement Preview (ghost of object to be placed) ===
+  if(placementMode){
+    const ps = worldToScreen(mouseWorld.x, mouseWorld.y);
+    ctx.globalAlpha = 0.5;
+    if(placementMode==='entity'){
+      ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1;
+      ctx.strokeRect(ps.x-20*z, ps.y-20*z, 40*z, 40*z);
+      ctx.font=`${Math.max(8,20*z)}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('NEW', ps.x, ps.y);
+    }else if(placementMode==='blackhole'){
+      ctx.strokeStyle='rgba(128,128,128,0.6)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(ps.x, ps.y, 110*z, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(80,80,80,0.5)';
+      ctx.beginPath(); ctx.arc(ps.x, ps.y, 4*z, 0, Math.PI*2); ctx.fill();
+    }else if(placementMode==='wall'){
+      ctx.strokeStyle='rgba(200,200,200,0.6)'; ctx.lineWidth=1;
+      ctx.strokeRect(ps.x-50*z, ps.y-18*z, 100*z, 36*z);
+      ctx.font=`${Math.max(8,14*z)}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('WALL', ps.x, ps.y);
+    }else if(placementMode==='scattered'){
+      ctx.strokeStyle='rgba(255,255,255,0.4)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(ps.x, ps.y, 10*z, 0, Math.PI*2); ctx.stroke();
+      ctx.font=`${Math.max(10,18*z)}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('word', ps.x, ps.y);
+    }else if(placementMode==='projectile'){
+      ctx.strokeStyle='rgba(255,221,68,0.4)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(ps.x, ps.y, 10*z, 0, Math.PI*2); ctx.stroke();
+      ctx.font=`${Math.max(8,14*z)}px "Segoe UI",system-ui,sans-serif`;
+      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('>', ps.x, ps.y);
+    }
+    ctx.globalAlpha = 1.0;
+  }
+
+  // === Box Selection Rectangle ===
+  if(isBoxSelecting && boxStart && boxEnd){
+    const bx = Math.min(boxStart.x, boxEnd.x);
+    const by = Math.min(boxStart.y, boxEnd.y);
+    const bw = Math.abs(boxEnd.x - boxStart.x);
+    const bh = Math.abs(boxEnd.y - boxStart.y);
+    ctx.fillStyle = 'rgba(108,138,255,0.1)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(108,138,255,0.6)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,4]);
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.setLineDash([]);
+
+    // Show count of objects inside while dragging
+    const w1 = screenToWorld(boxStart.x, boxStart.y);
+    const w2 = screenToWorld(boxEnd.x, boxEnd.y);
+    const preview = hitTestRect(w1.x, w1.y, w2.x, w2.y);
+    if(preview.length > 0){
+      ctx.font = '12px sans-serif';
+      ctx.fillStyle = 'rgba(108,138,255,0.9)';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${preview.length} objects`, bx+4, by-4);
+    }
+  }
+
+  // Status
+  document.getElementById('statEntities').textContent = save.entities.length;
+  document.getElementById('statWalls').textContent = save.walls.length;
+  document.getElementById('statBHs').textContent = save.blackHoles.length;
+  document.getElementById('statWords').textContent = save.scatteredWords.length;
+  const totalSel = multiSelection.length > 0 ? multiSelection.length : (selection ? 1 : 0);
+  document.getElementById('statSel').textContent = totalSel;
+
+  drawMinimap();
+  requestAnimationFrame(draw);
+}
+
+function drawMinimap(){
+  if(!save) return;
+  const mw=160,mh=120;
+  const sx=mw/save.worldWidth, sy=mh/save.worldHeight;
+  mmCtx.fillStyle='#000';
+  mmCtx.fillRect(0,0,mw,mh);
+  mmCtx.fillStyle='rgba(200,200,200,0.3)';
+  save.walls.forEach(w=>{
+    mmCtx.fillRect(w[W_X]*sx-w[W_WIDTH]*sx/2,w[W_Y]*sy-w[W_HEIGHT]*sy/2,Math.max(1,w[W_WIDTH]*sx),Math.max(1,w[W_HEIGHT]*sy));
+  });
+  save.entities.forEach(e=>{
+    let c='#f44';
+    if(e[E_TYPE]===ENTITY_TYPE.NUMBER) c='#4f4';
+    else if(e[E_TYPE]===ENTITY_TYPE.WRITER) c='#4df';
+    else if(e[E_TYPE]===ENTITY_TYPE.SCATTER) c='#888';
+    mmCtx.fillStyle=c;
+    mmCtx.beginPath();mmCtx.arc(e[E_X]*sx,e[E_Y]*sy,Math.max(1,2),0,Math.PI*2);mmCtx.fill();
+  });
+  save.blackHoles.forEach(bh=>{
+    mmCtx.fillStyle='rgba(64,64,64,0.5)';
+    mmCtx.beginPath();mmCtx.arc(bh[BH_X]*sx,bh[BH_Y]*sy,Math.max(2,bh[BH_ABS]*sx),0,Math.PI*2);mmCtx.fill();
+  });
+  // Highlight selected objects on minimap
+  const allSel = multiSelection.length > 0 ? multiSelection : (selection ? [selection] : []);
+  allSel.forEach(s=>{
+    const p = getObjPos(s);
+    if(p){
+      mmCtx.fillStyle='#6c8aff';
+      mmCtx.beginPath();mmCtx.arc(p.x*sx,p.y*sy,3,0,Math.PI*2);mmCtx.fill();
+    }
+  });
+  mmCtx.strokeStyle='rgba(255,255,255,0.3)';mmCtx.lineWidth=1;
+  mmCtx.strokeRect(camera.x*sx,camera.y*sy,canvasW()/camera.zoom*sx,canvasH()/camera.zoom*sy);
+  mmCtx.fillStyle='#44ff88';
+  mmCtx.beginPath();mmCtx.arc(save.playerX*sx,save.playerY*sy,3,0,Math.PI*2);mmCtx.fill();
+}
+
+// ===================== SIDEBAR =====================
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  updateSidebar();
+}
+
+function updateSidebar(){
+  const content = document.getElementById('sidebarContent');
+  if(!save){content.innerHTML='<div class="empty-msg">No world loaded</div>';return;}
+  if(currentTab==='player') renderPlayerTab(content);
+  else if(currentTab==='world') renderWorldTab(content);
+  else if(currentTab==='objects') renderObjectsTab(content);
+}
+
+function renderPlayerTab(el){
+  let html = `
+    <div class="prop-section">
+      <div class="prop-section-title">Player Position</div>
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${save.playerX}" onchange="pushUndo();save.playerX=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${save.playerY}" onchange="pushUndo();save.playerY=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${save.playerAngle}" step="0.1" onchange="pushUndo();save.playerAngle=+this.value"></div>
+    </div>
+    <div class="prop-section">
+      <div class="prop-section-title">Stats</div>
+      <div class="prop-row"><span class="prop-label">Health</span><input class="prop-input" type="number" value="${save.health}" onchange="pushUndo();save.health=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Score</span><input class="prop-input" type="number" value="${save.score}" onchange="pushUndo();save.score=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Deaths</span><input class="prop-input" type="number" value="${save.deathCount}" onchange="pushUndo();save.deathCount=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Speed</span><input class="prop-input" type="number" value="${save.playerSpeed}" step="0.1" onchange="pushUndo();save.playerSpeed=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Game Speed</span><input class="prop-input" type="number" value="${save.gameSpeed}" step="0.01" onchange="pushUndo();save.gameSpeed=+this.value"></div>
+    </div>
+    <div class="prop-section">
+      <div class="prop-section-title">Inventory (${save.inventory.length}/${save.maxInventorySize})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">`;
+  save.inventory.forEach((w,i)=>{
+    html += `<span class="inv-tag">${escHtml(w)}<span class="x" onclick="pushUndo();save.inventory.splice(${i},1);updateSidebar()">x</span></span>`;
+  });
+  html += `</div>
+      <div class="prop-row">
+        <input class="prop-input" id="invAddInput" type="text" placeholder="Add word..." style="flex:1">
+        <button class="prop-btn" onclick="pushUndo();const inp=document.getElementById('invAddInput');if(inp.value){save.inventory.push(inp.value);inp.value='';updateSidebar()}">Add</button>
+      </div>
+    </div>`;
+  el.innerHTML = html;
+}
+
+function renderWorldTab(el){
+  el.innerHTML = `
+    <div class="prop-section">
+      <div class="prop-section-title">World</div>
+      <div class="prop-row"><span class="prop-label">Width</span><input class="prop-input" type="number" value="${save.worldWidth}" onchange="pushUndo();save.worldWidth=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Height</span><input class="prop-input" type="number" value="${save.worldHeight}" onchange="pushUndo();save.worldHeight=+this.value"></div>
+    </div>
+    <div class="prop-section">
+      <div class="prop-section-title">Spawning</div>
+      <div class="prop-row"><span class="prop-label">Spawn Count</span><input class="prop-input" type="number" value="${save.spawnCount}" onchange="pushUndo();save.spawnCount=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Spawn Min</span><input class="prop-input" type="number" value="${save.spawnMin}" onchange="pushUndo();save.spawnMin=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Spawn Max</span><input class="prop-input" type="number" value="${save.spawnMax}" onchange="pushUndo();save.spawnMax=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Max Inv Size</span><input class="prop-input" type="number" value="${save.maxInventorySize}" onchange="pushUndo();save.maxInventorySize=+this.value"></div>
+    </div>
+    <div class="prop-section">
+      <div class="prop-section-title">Summary</div>
+      <div class="prop-row"><span class="prop-label">Entities</span><span class="prop-input" disabled>${save.entities.length}</span></div>
+      <div class="prop-row"><span class="prop-label">Black Holes</span><span class="prop-input" disabled>${save.blackHoles.length}</span></div>
+      <div class="prop-row"><span class="prop-label">Walls</span><span class="prop-input" disabled>${save.walls.length}</span></div>
+      <div class="prop-row"><span class="prop-label">Scattered</span><span class="prop-input" disabled>${save.scatteredWords.length}</span></div>
+      <div class="prop-row"><span class="prop-label">Projectiles</span><span class="prop-input" disabled>${save.projectiles.length}</span></div>
+    </div>`;
+}
+
+function renderObjectsTab(el){
+  let html = '';
+
+  // === UPPER PART: Object Lists ===
+  // Entities
+  html += `<div class="prop-section">
+    <div class="prop-section-title">Entities (${save.entities.length})</div>
+    <div class="prop-row">
+      <select class="prop-select" id="entityFilter" onchange="renderObjectsTab(document.getElementById('sidebarContent'))">
+        <option value="all">All Types</option>
+        ${TYPE_NAMES.map((n,i)=>`<option value="${i}">${n}</option>`).join('')}
+      </select>
+    </div>
+    <div class="obj-list">`;
+  const filter = document.getElementById('entityFilter');
+  const filterVal = filter ? filter.value : 'all';
+  save.entities.forEach((e,i)=>{
+    if(filterVal!=='all' && e[E_TYPE]!==parseInt(filterVal)) return;
+    const sel = isObjSelected('entity',i)?'selected':'';
+    const word = escHtml(String(e[E_WORD]).substring(0,20));
+    html += `<div class="obj-item ${sel}" onclick="selectAndFocus('entity',${i})">${word} <span class="tag">${TYPE_NAMES[e[E_TYPE]]||'?'}</span></div>`;
+  });
+  html += `</div></div>`;
+
+  // Black holes
+  html += `<div class="prop-section"><div class="prop-section-title">Black Holes (${save.blackHoles.length})</div><div class="obj-list">`;
+  save.blackHoles.forEach((bh,i)=>{
+    const sel = isObjSelected('blackhole',i)?'selected':'';
+    html += `<div class="obj-item ${sel}" onclick="selectAndFocus('blackhole',${i})">BH #${i+1} m=${bh[BH_MASS].toFixed(1)}</div>`;
+  });
+  html += `</div></div>`;
+
+  // Walls
+  html += `<div class="prop-section"><div class="prop-section-title">Walls (${save.walls.length})</div><div class="obj-list">`;
+  save.walls.forEach((w,i)=>{
+    const sel = isObjSelected('wall',i)?'selected':'';
+    html += `<div class="obj-item ${sel}" onclick="selectAndFocus('wall',${i})">${escHtml(String(w[W_WORD]).substring(0,20))}</div>`;
+  });
+  html += `</div></div>`;
+
+  // Scattered
+  html += `<div class="prop-section"><div class="prop-section-title">Scatter Words (${save.scatteredWords.length})</div><div class="obj-list" style="max-height:120px">`;
+  save.scatteredWords.forEach((w,i)=>{
+    const sel = isObjSelected('scattered',i)?'selected':'';
+    html += `<div class="obj-item ${sel}" onclick="selectAndFocus('scattered',${i})">${escHtml(String(w[S_WORD]).substring(0,15))}</div>`;
+  });
+  html += `</div></div>`;
+
+  // Projectiles
+  html += `<div class="prop-section"><div class="prop-section-title">Projectiles (${save.projectiles.length})</div><div class="obj-list" style="max-height:120px">`;
+  save.projectiles.forEach((p,i)=>{
+    const sel = isObjSelected('projectile',i)?'selected':'';
+    html += `<div class="obj-item ${sel}" onclick="selectAndFocus('projectile',${i})">${escHtml(String(p[P_WORD]).substring(0,15))}</div>`;
+  });
+  html += `</div></div>`;
+
+  // === LOWER PART: Selected Object Properties ===
+  html += `<div style="border-top:2px solid var(--accent);margin-top:4px;padding-top:4px">`;
+  html += renderSelectedProps();
+  html += `</div>`;
+
+  el.innerHTML = html;
+  const f2 = document.getElementById('entityFilter');
+  if(f2 && filterVal!=='all') f2.value = filterVal;
+}
+
+// Sync a property change to all same-type objects in multi-selection
+// For numeric properties: applies the same DELTA (relative change)
+// For categorical properties (type, behavior, can*): sets the same absolute value
+// For position properties (x, y): applies the same DELTA (relative offset)
+function syncMultiProp(type, propName, newValue, oldValue){
+  if(multiSelection.length <= 1) return;
+  const delta = newValue - (oldValue || 0);
+  // Determine if this property uses delta-based or absolute sync
+  const absoluteProps = ['type','behavior','canThrow','canCombine','canWall','canAttack','isThrowing','isCombining'];
+  const useAbsolute = absoluteProps.includes(propName);
+  multiSelection.forEach(s=>{
+    if(s.type !== type) return;
+    // Skip the primary selection (already set by the input handler)
+    if(selection && s.type === selection.type && s.index === selection.index) return;
+    if(type==='entity'){
+      const e = save.entities[s.index];
+      if(!e) return;
+      if(propName==='x') e[E_X] = (e[E_X]||0) + delta;
+      else if(propName==='y') e[E_Y] = (e[E_Y]||0) + delta;
+      else if(propName==='vx') e[E_VX] = (e[E_VX]||0) + delta;
+      else if(propName==='vy') e[E_VY] = (e[E_VY]||0) + delta;
+      else if(propName==='angle') e[E_ANGLE] = useAbsolute ? newValue : (e[E_ANGLE]||0) + delta;
+      else if(propName==='size') e[E_SIZE] = useAbsolute ? newValue : (e[E_SIZE]||0) + delta;
+      else if(propName==='type') e[E_TYPE] = newValue;
+      else if(propName==='behavior') e[E_BEHAVIOR] = newValue;
+      else if(propName==='canThrow') e[E_CAN_THROW] = newValue;
+      else if(propName==='canCombine') e[E_CAN_COMB] = newValue;
+      else if(propName==='canWall') e[E_CAN_WALL] = newValue;
+      else if(propName==='canAttack') e[E_CAN_ATK] = newValue;
+      else if(propName==='speed') e[E_SPEED] = useAbsolute ? newValue : (e[E_SPEED]||0) + delta;
+      else if(propName==='viewDist') e[E_VIEW_DIST] = useAbsolute ? newValue : (e[E_VIEW_DIST]||0) + delta;
+      else if(propName==='damage') e[E_DAMAGE] = (e[E_DAMAGE]||0) + delta;
+      else if(propName==='lifetime') e[E_LIFETIME] = (e[E_LIFETIME]||0) + delta;
+      else if(propName==='invulnTime') e[E_INVULN_TIME] = (e[E_INVULN_TIME]||0) + delta;
+      else if(propName==='isThrowing') e[E_IS_THROWING] = newValue;
+      else if(propName==='isCombining') e[E_IS_COMBINING] = newValue;
+    }else if(type==='wall'){
+      const w = save.walls[s.index];
+      if(!w) return;
+      if(propName==='x') w[W_X] = (w[W_X]||0) + delta;
+      else if(propName==='y') w[W_Y] = (w[W_Y]||0) + delta;
+      else if(propName==='angle') w[W_ANGLE] = (w[W_ANGLE]||0) + delta;
+      else if(propName==='width') w[W_WIDTH] = (w[W_WIDTH]||0) + delta;
+      else if(propName==='height') w[W_HEIGHT] = (w[W_HEIGHT]||0) + delta;
+    }else if(type==='blackhole'){
+      const bh = save.blackHoles[s.index];
+      if(!bh) return;
+      if(propName==='x') bh[BH_X] = (bh[BH_X]||0) + delta;
+      else if(propName==='y') bh[BH_Y] = (bh[BH_Y]||0) + delta;
+      else if(propName==='mass') bh[BH_MASS] = (bh[BH_MASS]||0) + delta;
+      else if(propName==='absRadius') bh[BH_ABS] = (bh[BH_ABS]||0) + delta;
+      else if(propName==='speed') bh[BH_SPEED] = (bh[BH_SPEED]||0) + delta;
+      else if(propName==='wanderAngle') bh[BH_WA] = (bh[BH_WA]||0) + delta;
+    }else if(type==='projectile'){
+      const p = save.projectiles[s.index];
+      if(!p) return;
+      if(propName==='x') p[P_X] = (p[P_X]||0) + delta;
+      else if(propName==='y') p[P_Y] = (p[P_Y]||0) + delta;
+      else if(propName==='vx') p[P_VX] = (p[P_VX]||0) + delta;
+      else if(propName==='vy') p[P_VY] = (p[P_VY]||0) + delta;
+      else if(propName==='angle') p[P_ANGLE] = (p[P_ANGLE]||0) + delta;
+      else if(propName==='damage') p[P_DAMAGE] = (p[P_DAMAGE]||0) + delta;
+      else if(propName==='owner') p[P_OWNER] = newValue;
+      else if(propName==='protectTime') p[P_PROTECT_TIME] = (p[P_PROTECT_TIME]||0) + delta;
+      else if(propName==='lifetime') p[P_LIFETIME] = (p[P_LIFETIME]||0) + delta;
+    }else if(type==='scattered'){
+      const sc = save.scatteredWords[s.index];
+      if(!sc) return;
+      if(propName==='x') sc[S_X] = (sc[S_X]||0) + delta;
+      else if(propName==='y') sc[S_Y] = (sc[S_Y]||0) + delta;
+      else if(propName==='vx') sc[S_VX] = (sc[S_VX]||0) + delta;
+      else if(propName==='vy') sc[S_VY] = (sc[S_VY]||0) + delta;
+      else if(propName==='angle') sc[S_ANGLE] = (sc[S_ANGLE]||0) + delta;
+      else if(propName==='lifetime') sc[S_LIFETIME] = (sc[S_LIFETIME]||0) + delta;
+    }
+  });
+}
+
+// Returns HTML string for the selected object properties (inline, not a separate tab)
+function renderSelectedProps(){
+  // Multi-selection mode - show primary selection properties with sync indicator
+  const isMulti = multiSelection.length > 1;
+
+  if(!selection && !isMulti){
+    return '<div class="empty-msg" style="padding:10px">Click an object to select it<br><small>Shift+drag to box-select | Drag \">\" to change direction</small></div>';
+  }
+  if(!selection){
+    return '<div class="empty-msg" style="padding:10px">No primary selection</div>';
+  }
+
+  const {type,index} = selection;
+  let html = '';
+  // Show multi-selection count indicator
+  if(isMulti){
+    html += `<div style="background:var(--accent);color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;margin-bottom:6px;text-align:center">${multiSelection.length} objects selected — changes apply to all same-type</div>`;
+  }
+  html += `<div class="prop-section"><div class="prop-section-title">${selTitle(type)}</div>`;
+
+  if(type==='player'){
+    html += `
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${save.playerX}" step="1" onchange="pushUndo();save.playerX=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${save.playerY}" step="1" onchange="pushUndo();save.playerY=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${save.playerAngle}" step="1" onchange="pushUndo();save.playerAngle=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Health</span><input class="prop-input" type="number" value="${save.health}" onchange="pushUndo();save.health=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Speed</span><input class="prop-input" type="number" value="${save.playerSpeed}" step="0.1" onchange="pushUndo();save.playerSpeed=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Score</span><input class="prop-input" type="number" value="${save.score}" onchange="pushUndo();save.score=+this.value"></div>
+      <div class="prop-row"><span class="prop-label">Deaths</span><input class="prop-input" type="number" value="${save.deathCount}" onchange="pushUndo();save.deathCount=+this.value"></div>`;
+  }else if(type==='entity'){
+    const e = save.entities[index];
+    if(!e) return '<div class="empty-msg">Object not found</div>';
+    const eType = e[E_TYPE];
+    html += `
+      <div class="prop-row"><span class="prop-label">Word</span><input class="prop-input" type="text" value="${escAttr(e[E_WORD])}" onchange="pushUndo();save.entities[${index}][E_WORD]=this.value"></div>
+      <div class="prop-row"><span class="prop-label">Type</span><select class="prop-select" onchange="pushUndo();let _old=save.entities[${index}][E_TYPE];save.entities[${index}][E_TYPE]=+this.value;syncMultiProp('entity','type',+this.value,_old);updateSidebar()">
+        ${TYPE_NAMES.map((n,i)=>`<option value="${i}"${eType===i?' selected':''}>${n}</option>`).join('')}
+      </select></div>
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${e[E_X]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_X];save.entities[${index}][E_X]=+this.value;syncMultiProp('entity','x',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${e[E_Y]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_Y];save.entities[${index}][E_Y]=+this.value;syncMultiProp('entity','y',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">VX</span><input class="prop-input" type="number" value="${e[E_VX]}" step="0.1" onchange="pushUndo();let _old=save.entities[${index}][E_VX];save.entities[${index}][E_VX]=+this.value;syncMultiProp('entity','vx',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">VY</span><input class="prop-input" type="number" value="${e[E_VY]}" step="0.1" onchange="pushUndo();let _old=save.entities[${index}][E_VY];save.entities[${index}][E_VY]=+this.value;syncMultiProp('entity','vy',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Speed</span><input class="prop-input" type="number" value="${e[E_SPEED]}" step="0.01" onchange="pushUndo();let _old=save.entities[${index}][E_SPEED];save.entities[${index}][E_SPEED]=+this.value;syncMultiProp('entity','speed',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Size</span><input class="prop-input" type="number" value="${e[E_SIZE]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_SIZE];save.entities[${index}][E_SIZE]=+this.value;syncMultiProp('entity','size',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${e[E_ANGLE]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_ANGLE];save.entities[${index}][E_ANGLE]=+this.value;syncMultiProp('entity','angle',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Behavior</span><select class="prop-select" onchange="pushUndo();let _old=save.entities[${index}][E_BEHAVIOR];save.entities[${index}][E_BEHAVIOR]=+this.value;syncMultiProp('entity','behavior',+this.value,_old);updateSidebar()">
+        ${BEHAVIOR_NAMES.map((n,i)=>`<option value="${i}"${e[E_BEHAVIOR]===i?' selected':''}>${n}</option>`).join('')}
+      </select></div>
+      <div class="prop-row"><span class="prop-label">View Dist</span><input class="prop-input" type="number" value="${e[E_VIEW_DIST]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_VIEW_DIST];save.entities[${index}][E_VIEW_DIST]=+this.value;syncMultiProp('entity','viewDist',+this.value,_old)"></div>`;
+
+    html += `</div><div class="prop-section"><div class="prop-section-title">Can Properties</div>`;
+    html += canPropRow('Can Throw', e[E_CAN_THROW], index, E_CAN_THROW, 'canThrow');
+    html += canPropRow('Can Combine', e[E_CAN_COMB], index, E_CAN_COMB, 'canCombine');
+    html += canPropRow('Can Wall', e[E_CAN_WALL], index, E_CAN_WALL, 'canWall');
+    html += canPropRow('Can Attack', e[E_CAN_ATK], index, E_CAN_ATK, 'canAttack');
+    html += `</div><div class="prop-section"><div class="prop-section-title">State</div>`;
+    html += `<div class="prop-row"><span class="prop-label">Is Throwing</span><input class="prop-checkbox" type="checkbox" ${e[E_IS_THROWING]?'checked':''} onchange="pushUndo();save.entities[${index}][E_IS_THROWING]=this.checked?1:0;syncMultiProp('entity','isThrowing',this.checked?1:0,0);updateSidebar()"></div>`;
+    html += `<div class="prop-row"><span class="prop-label">Is Combining</span><input class="prop-checkbox" type="checkbox" ${e[E_IS_COMBINING]?'checked':''} onchange="pushUndo();save.entities[${index}][E_IS_COMBINING]=this.checked?1:0;syncMultiProp('entity','isCombining',this.checked?1:0,0);updateSidebar()"></div>`;
+    html += `<div class="prop-row"><span class="prop-label">Invuln Time</span><input class="prop-input" type="number" value="${e[E_INVULN_TIME]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_INVULN_TIME];save.entities[${index}][E_INVULN_TIME]=+this.value;syncMultiProp('entity','invulnTime',+this.value,_old)"></div>`;
+    html += `<div class="prop-row"><span class="prop-label">Lifetime</span><input class="prop-input" type="number" value="${e[E_LIFETIME]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_LIFETIME];save.entities[${index}][E_LIFETIME]=+this.value;syncMultiProp('entity','lifetime',+this.value,_old)"></div>`;
+    html += `<div class="prop-row"><span class="prop-label">Damage</span><input class="prop-input" type="number" value="${e[E_DAMAGE]}" step="1" onchange="pushUndo();let _old=save.entities[${index}][E_DAMAGE];save.entities[${index}][E_DAMAGE]=+this.value;syncMultiProp('entity','damage',+this.value,_old)"></div>`;
+
+    if(eType===ENTITY_TYPE.WRITER && e[E_INVENTORY] && e[E_INVENTORY].length>0){
+      html += `</div><div class="prop-section"><div class="prop-section-title">Writer Inventory (${e[E_INVENTORY].length})</div>`;
+      html += `<div style="display:flex;flex-wrap:wrap;gap:3px">`;
+      e[E_INVENTORY].forEach((w,wi)=>{
+        html += `<span class="inv-tag">${escHtml(w)}<span class="x" onclick="pushUndo();save.entities[${index}][E_INVENTORY].splice(${wi},1);updateSidebar()">x</span></span>`;
+      });
+      html += `</div>`;
+    }
+
+  }else if(type==='blackhole'){
+    const bh = save.blackHoles[index];
+    if(!bh) return '<div class="empty-msg">Object not found</div>';
+    html += `
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${bh[BH_X]}" step="1" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_X];save.blackHoles[${index}][BH_X]=+this.value;syncMultiProp('blackhole','x',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${bh[BH_Y]}" step="1" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_Y];save.blackHoles[${index}][BH_Y]=+this.value;syncMultiProp('blackhole','y',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Mass</span><input class="prop-input" type="number" value="${bh[BH_MASS]}" step="0.1" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_MASS];save.blackHoles[${index}][BH_MASS]=+this.value;syncMultiProp('blackhole','mass',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Abs Radius</span><input class="prop-input" type="number" value="${bh[BH_ABS]}" step="1" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_ABS];save.blackHoles[${index}][BH_ABS]=+this.value;syncMultiProp('blackhole','absRadius',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Speed</span><input class="prop-input" type="number" value="${bh[BH_SPEED]}" step="0.01" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_SPEED];save.blackHoles[${index}][BH_SPEED]=+this.value;syncMultiProp('blackhole','speed',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Wander Angle</span><input class="prop-input" type="number" value="${bh[BH_WA]}" step="0.01" onchange="pushUndo();let _old=save.blackHoles[${index}][BH_WA];save.blackHoles[${index}][BH_WA]=+this.value;syncMultiProp('blackhole','wanderAngle',+this.value,_old)"></div>`;
+
+  }else if(type==='wall'){
+    const w = save.walls[index];
+    if(!w) return '<div class="empty-msg">Object not found</div>';
+    html += `
+      <div class="prop-row"><span class="prop-label">Word</span><input class="prop-input" type="text" value="${escAttr(w[W_WORD])}" onchange="pushUndo();save.walls[${index}][W_WORD]=this.value"></div>
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${w[W_X]}" step="1" onchange="pushUndo();let _old=save.walls[${index}][W_X];save.walls[${index}][W_X]=+this.value;syncMultiProp('wall','x',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${w[W_Y]}" step="1" onchange="pushUndo();let _old=save.walls[${index}][W_Y];save.walls[${index}][W_Y]=+this.value;syncMultiProp('wall','y',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Width</span><input class="prop-input" type="number" value="${w[W_WIDTH]}" step="1" onchange="pushUndo();let _old=save.walls[${index}][W_WIDTH];save.walls[${index}][W_WIDTH]=+this.value;syncMultiProp('wall','width',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Height</span><input class="prop-input" type="number" value="${w[W_HEIGHT]}" step="1" onchange="pushUndo();let _old=save.walls[${index}][W_HEIGHT];save.walls[${index}][W_HEIGHT]=+this.value;syncMultiProp('wall','height',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${w[W_ANGLE]}" step="1" onchange="pushUndo();let _old=save.walls[${index}][W_ANGLE];save.walls[${index}][W_ANGLE]=+this.value;syncMultiProp('wall','angle',+this.value,_old)"></div>`;
+
+  }else if(type==='scattered'){
+    const s = save.scatteredWords[index];
+    if(!s) return '<div class="empty-msg">Object not found</div>';
+    html += `
+      <div class="prop-row"><span class="prop-label">Word</span><input class="prop-input" type="text" value="${escAttr(s[S_WORD])}" onchange="pushUndo();save.scatteredWords[${index}][S_WORD]=this.value"></div>
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${s[S_X]}" step="1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_X];save.scatteredWords[${index}][S_X]=+this.value;syncMultiProp('scattered','x',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${s[S_Y]}" step="1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_Y];save.scatteredWords[${index}][S_Y]=+this.value;syncMultiProp('scattered','y',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">VX</span><input class="prop-input" type="number" value="${s[S_VX]}" step="0.1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_VX];save.scatteredWords[${index}][S_VX]=+this.value;syncMultiProp('scattered','vx',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">VY</span><input class="prop-input" type="number" value="${s[S_VY]}" step="0.1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_VY];save.scatteredWords[${index}][S_VY]=+this.value;syncMultiProp('scattered','vy',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${s[S_ANGLE]}" step="1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_ANGLE];save.scatteredWords[${index}][S_ANGLE]=+this.value;syncMultiProp('scattered','angle',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Lifetime</span><input class="prop-input" type="number" value="${s[S_LIFETIME]}" step="1" onchange="pushUndo();let _old=save.scatteredWords[${index}][S_LIFETIME];save.scatteredWords[${index}][S_LIFETIME]=+this.value;syncMultiProp('scattered','lifetime',+this.value,_old)"></div>`;
+
+  }else if(type==='projectile'){
+    const p = save.projectiles[index];
+    if(!p) return '<div class="empty-msg">Object not found</div>';
+    html += `
+      <div class="prop-row"><span class="prop-label">Word</span><input class="prop-input" type="text" value="${escAttr(p[P_WORD])}" onchange="pushUndo();save.projectiles[${index}][P_WORD]=this.value"></div>
+      <div class="prop-row"><span class="prop-label">X</span><input class="prop-input" type="number" value="${p[P_X]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_X];save.projectiles[${index}][P_X]=+this.value;syncMultiProp('projectile','x',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">Y</span><input class="prop-input" type="number" value="${p[P_Y]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_Y];save.projectiles[${index}][P_Y]=+this.value;syncMultiProp('projectile','y',+this.value,_old);updateSidebar()"></div>
+      <div class="prop-row"><span class="prop-label">VX</span><input class="prop-input" type="number" value="${p[P_VX]}" step="0.1" onchange="pushUndo();let _old=save.projectiles[${index}][P_VX];save.projectiles[${index}][P_VX]=+this.value;syncMultiProp('projectile','vx',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">VY</span><input class="prop-input" type="number" value="${p[P_VY]}" step="0.1" onchange="pushUndo();let _old=save.projectiles[${index}][P_VY];save.projectiles[${index}][P_VY]=+this.value;syncMultiProp('projectile','vy',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Angle</span><input class="prop-input" type="number" value="${p[P_ANGLE]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_ANGLE];save.projectiles[${index}][P_ANGLE]=+this.value;syncMultiProp('projectile','angle',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Damage</span><input class="prop-input" type="number" value="${p[P_DAMAGE]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_DAMAGE];save.projectiles[${index}][P_DAMAGE]=+this.value;syncMultiProp('projectile','damage',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Owner</span><input class="prop-input" type="number" value="${p[P_OWNER]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_OWNER];save.projectiles[${index}][P_OWNER]=+this.value;syncMultiProp('projectile','owner',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Protect Time</span><input class="prop-input" type="number" value="${p[P_PROTECT_TIME]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_PROTECT_TIME];save.projectiles[${index}][P_PROTECT_TIME]=+this.value;syncMultiProp('projectile','protectTime',+this.value,_old)"></div>
+      <div class="prop-row"><span class="prop-label">Lifetime</span><input class="prop-input" type="number" value="${p[P_LIFETIME]}" step="1" onchange="pushUndo();let _old=save.projectiles[${index}][P_LIFETIME];save.projectiles[${index}][P_LIFETIME]=+this.value;syncMultiProp('projectile','lifetime',+this.value,_old)"></div>`;
+  }
+
+  // Action buttons
+  if(type!=='player'){
+    html += `</div><div style="margin-top:10px;display:flex;gap:6px">
+      <button class="prop-btn" onclick="focusSelected()" style="flex:1">Focus (F)</button>
+      <button class="prop-btn danger" onclick="deleteSelected()" style="flex:1">Delete (Del)</button>
+    </div>`;
+  }else{
+    html += `</div><div style="margin-top:10px"><button class="prop-btn" onclick="focusSelected()" style="width:100%">Focus (F)</button></div>`;
+  }
+
+  return html;
+}
+
+// Can property row helper with toggle + numeric value
+function canPropRow(label, val, entityIdx, constIdx, propName){
+  const isOn = val ? true : false;
+  const syncCall = propName ? `let _old=save.entities[${entityIdx}][${constIdx}];syncMultiProp('entity','${propName}',this.checked?1:0,_old);` : '';
+  return `<div class="can-row">
+    <span class="can-label">${label}</span>
+    <span class="can-val">${isOn?'ON':'OFF'}</span>
+    <input class="prop-checkbox" type="checkbox" ${isOn?'checked':''} onchange="pushUndo();save.entities[${entityIdx}][${constIdx}]=this.checked?1:0;${syncCall}updateSidebar()">
+  </div>`;
+}
+
+function selTitle(type){
+  if(type==='player') return 'Player';
+  if(type==='entity') return 'Entity';
+  if(type==='blackhole') return 'Black Hole';
+  if(type==='wall') return 'Wall';
+  if(type==='scattered') return 'Scatter Word';
+  if(type==='projectile') return 'Projectile';
+  return 'Object';
+}
+
+// ===================== HELPERS =====================
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function escAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function toggleHelp(){document.getElementById('helpOverlay').classList.toggle('visible');}
+
+// ===================== INIT =====================
+centerOnPlayer();
+updateSidebar();
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,4288 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #000;
+      color: #fff;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      max-width: none;
+      height: 100vh;
+      background: #111;
+      border: none;
+      overflow: hidden;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #gameUI {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 16px;
+      z-index: 10;
+      background: transparent !important;
+      padding: 10px;
+      border: none !important;
+    }
+
+    #score,
+    #health,
+    #coordinates {
+      margin-bottom: 5px;
+    }
+
+    #minimap {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 200px;
+      height: 150px;
+      background: transparent !important;
+      border: none !important;
+      z-index: 10;
+    }
+
+    #minimapCanvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    #instructions {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 14px;
+      opacity: 0.7;
+      z-index: 10;
+    }
+
+    #performanceInfo {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      font-size: 12px;
+      color: #888;
+      z-index: 10;
+      text-align: right;
+    }
+
+    #liveTopWords {
+      position: absolute;
+      top: 120px;
+      left: 10px;
+      width: 180px;
+      max-height: calc(100vh - 150px);
+      overflow-y: auto;
+      font-size: 15px;
+      color: #fff;
+
+      z-index: 10;
+      pointer-events: none;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #liveTopWords::-webkit-scrollbar {
+      width: 0;
+
+    }
+
+    .liveWordEntry {
+      margin-bottom: 4px;
+
+    }
+
+    .liveWordRank {
+      display: none;
+
+    }
+
+    .liveWordText {
+      color: #fff;
+
+    }
+
+    .liveWordLength {
+      display: none;
+
+    }
+
+    #shortcuts {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      font-size: 12px;
+      color: #aaa;
+      z-index: 5;
+      background: transparent !important;
+      padding: 5px 10px;
+      border: none !important;
+    }
+
+    #pauseScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      z-index: 30;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow-y: auto;
+      padding: 20px 0;
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 300ms ease-in-out, visibility 300ms ease-in-out;
+    }
+
+    #pauseScreen.visible {
+      display: flex;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #pauseContent {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 500px;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #pauseTitle {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #ffffff;
+      border: none !important;
+      background: transparent !important;
+    }
+
+    .pauseStats {
+      display: grid;
+      grid-template-columns: auto auto;
+      gap: 8px 20px;
+      margin-bottom: 20px;
+      text-align: left;
+      width: 100%;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseStatRow {
+      display: flex;
+      justify-content: space-between;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseStatLabel {
+      color: #aaa;
+      flex: 0 0 40%;
+      text-align: left;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseStatValue {
+      color: #fff;
+      font-weight: bold;
+      flex: 0 0 60%;
+      text-align: right;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseTopWords {
+      margin-top: 15px;
+      text-align: left;
+      width: 100%;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseWordsToggle {
+      cursor: pointer;
+      margin-bottom: 10px;
+      padding: 5px 0;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      user-select: none;
+      background: transparent !important;
+      border: none !important;
+      text-decoration: none !important;
+    }
+
+    .pauseWordsToggle:hover {
+      color: #aaa;
+    }
+
+    .toggleIcon {
+      display: inline-block;
+      transition: transform 0.3s;
+      font-size: 14px;
+      margin-left: 5px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .toggleIcon.collapsed {
+      transform: rotate(-90deg);
+    }
+
+    .pauseWordsContent {
+      max-height: 300px;
+      overflow-y: auto;
+      transition: max-height 0.3s ease-out;
+      padding-right: 5px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseWordsContent::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .pauseWordsContent::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .pauseWordsContent::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 5px;
+    }
+
+    .pauseWordsContent::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    .pauseWordsContent.collapsed {
+      max-height: 0;
+      overflow: hidden;
+    }
+
+    .pauseWordEntry {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
+      padding: 3px 5px;
+      border-bottom: none !important;
+
+      background: transparent !important;
+    }
+
+    .pauseWordRank {
+      color: #aaa;
+      margin-right: 10px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseWordText {
+      flex-grow: 1;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseWordLength {
+      color: #aaa;
+      margin-left: 10px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .pauseButtons {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+
+    .pauseBtn,
+    button,
+    input[type="button"],
+    input[type="submit"],
+    .newWorldBtn,
+    #clobtn,
+    #quickSaveBtn,
+    #newSaveBtn,
+    #cancelNewSaveBtn,
+    #newWorldBtn,
+    #respawnText,
+    #pauseWordsToggle,
+    label[for="quickImportFile"],
+    div[id*="Btn"],
+    div[class*="Btn"],
+    div[id*="btn"],
+    div[class*="btn"] {
+      display: block;
+      width: 100%;
+      padding: 12px 20px;
+      background: transparent !important;
+      color: #fff !important;
+      border: none !important;
+      font-size: 16px;
+      text-align: center;
+      cursor: pointer;
+      text-decoration: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      border-bottom: none !important;
+      border-top: none !important;
+      border-left: none !important;
+      border-right: none !important;
+    }
+
+    .pauseBtn:hover,
+    button:hover,
+    input[type="button"]:hover,
+    input[type="submit"]:hover,
+    .newWorldBtn:hover,
+    #clobtn:hover,
+    #quickSaveBtn:hover,
+    #newSaveBtn:hover,
+    #cancelNewSaveBtn:hover,
+    #newWorldBtn:hover,
+    #respawnText:hover,
+    #pauseWordsToggle:hover,
+    label[for="quickImportFile"]:hover,
+    div[id*="Btn"]:hover,
+    div[class*="Btn"]:hover,
+    div[id*="btn"]:hover,
+    div[class*="btn"]:hover {
+      color: #aaa !important;
+      text-decoration: none !important;
+      border-bottom: none !important;
+    }
+
+    .pauseBtn.primary,
+    button.primary,
+    input[type="button"].primary,
+    input[type="submit"].primary {
+      background: transparent !important;
+      color: #fff !important;
+      border: none !important;
+      text-decoration: none !important;
+    }
+
+    .pauseBtn.primary:hover,
+    button.primary:hover,
+    input[type="button"].primary:hover,
+    input[type="submit"].primary:hover {
+      color: #aaa !important;
+      text-decoration: none !important;
+    }
+
+    #newSaveModal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+
+      height: 100%;
+
+      background: rgba(0, 0, 0, 0.6) !important;
+
+      z-index: 40;
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 300ms ease-in-out, visibility 300ms ease-in-out;
+
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      border: none !important;
+      padding: 0;
+
+    }
+
+    #newSaveModal.visible {
+      display: flex;
+
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #newSaveModal h2 {
+      margin-bottom: 50px;
+      color: #fff;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .input-group {
+      margin-bottom: 15px;
+      text-align: left;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #aaa;
+      background: transparent !important;
+      border: none !important;
+    }
+
+
+    .modalInput,
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 0;
+      background: transparent !important;
+      border: none !important;
+      border-bottom: 1px solid #fff !important;
+      color: #fff !important;
+      font-size: 16px;
+      box-sizing: border-box;
+      outline: none !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
+      box-shadow: none !important;
+      text-decoration: none !important;
+    }
+
+    .modalInput:focus,
+    input[type="text"]:focus,
+    input[type="number"]:focus {
+      border-bottom-color: #aaa !important;
+    }
+
+    .modalButtons {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    #deathScreen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      z-index: 25;
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 300ms ease-in-out, visibility 300ms ease-in-out;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #deathScreen.visible {
+      display: flex;
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    #deathScore {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 24px;
+      color: #fff;
+      text-align: center;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #respawnText {
+      font-size: 48px;
+      color: #fff !important;
+      cursor: pointer;
+      text-align: center;
+      user-select: none;
+      transition: transform 0.2s;
+      background: transparent !important;
+      border: none !important;
+      padding: 12px 20px;
+      text-decoration: none !important;
+    }
+
+    #respawnText:hover {
+      transform: scale(1.1);
+      color: #aaa !important;
+    }
+
+    .settings-group {
+      margin-top: 20px;
+      width: 100%;
+      text-align: left;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .setting-label {
+      color: #aaa;
+      font-size: 14px;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .setting-value {
+      color: #fff;
+      font-weight: bold;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background: transparent !important;
+      border: 1px solid #fff !important;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle-switch.active {
+      background: transparent !important;
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(26px);
+    }
+
+
+
+    button,
+    input[type="button"],
+    input[type="submit"],
+    .pauseBtn,
+    .newWorldBtn,
+    #clobtn,
+    #quickSaveBtn,
+    #newSaveBtn,
+    #cancelNewSaveBtn,
+    #newWorldBtn,
+    #respawnText,
+    #pauseWordsToggle,
+    label[for="quickImportFile"] {
+      text-decoration: none !important;
+      border: none !important;
+      border-bottom: none !important;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div id="newSaveModal">
+      <form id="newSaveForm">
+        <div class="input-group">
+          <label for="inputWorldWidth">World Width</label>
+          <input type="number" id="inputWorldWidth" class="modalInput" placeholder="e.g., 20000">
+        </div>
+        <div class="input-group">
+          <label for="inputWorldHeight">World Height</label>
+          <input type="number" id="inputWorldHeight" class="modalInput" placeholder="e.g., 20000">
+        </div>
+        <div class="input-group">
+          <label for="inputSpawnCount">Monster Spawn Count (-1 for infinite)</label>
+          <input type="number" id="inputSpawnCount" class="modalInput" placeholder="e.g., -1">
+        </div>
+        <div class="input-group">
+          <label for="inputSpawnMin">Min Spawn Interval (ms)</label>
+          <input type="number" id="inputSpawnMin" class="modalInput" placeholder="e.g., 2300">
+        </div>
+        <div class="input-group">
+          <label for="inputSpawnMax">Max Spawn Interval (ms)</label>
+          <input type="number" id="inputSpawnMax" class="modalInput" placeholder="e.g., 3900">
+        </div>
+        <div class="input-group">
+          <label for="inputPlayerHealth">Player Health</label>
+          <input type="number" id="inputPlayerHealth" class="modalInput" placeholder="e.g., 20">
+        </div>
+        <div class="input-group">
+          <label for="inputPlayerSpeed">Player Speed</label>
+          <input type="number" id="inputPlayerSpeed" class="modalInput" placeholder="e.g., 8">
+        </div>
+        <div class="modalButtons">
+          <button type="button" id="newWorldBtn" class="pauseBtn newWorldBtn">NEW</button>
+          <button type="button" id="cancelNewSaveBtn" class="pauseBtn">CANCEL</button>
+        </div>
+        <div class="input-group">
+          <label for="inputBlackHoleCount">Black Hole Count</label>
+          <input type="number" id="inputBlackHoleCount" class="modalInput" placeholder="e.g., 1">
+        </div>
+      </form>
+    </div>
+    <div id="gameUI">
+      <div id="score">SCORE 0</div>
+      <div id="health">HEALTH 20</div>
+      <div id="coordinates">X 0, Y 0</div>
+      <div id="deathCount">DEATHS 0</div>
+      <div id="liveTopWords"></div>
+    </div>
+    <div id="minimap">
+      <canvas id="minimapCanvas"></canvas>
+    </div>
+    <div id="shortcuts"> N: QUICK SAVE | L: LOAD GAME | Z: RESUME </div>
+    <!-- 暂停界面 -->
+    <div id="pauseScreen">
+      <div id="pauseContent">
+        <h2 id="pauseTitle">GAME PAUSED</h2>
+        <div class="pauseStats">
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">SCORE</span>
+            <span class="pauseStatValue" id="pauseScore">0</span>
+          </div>
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">HEALTH</span>
+            <span class="pauseStatValue" id="pauseHealth">20</span>
+          </div>
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">DEATHS</span>
+            <span class="pauseStatValue" id="pauseDeathCount">0</span>
+          </div>
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">POS</span>
+            <span class="pauseStatValue" id="pausePosition">X 0, Y 0</span>
+          </div>
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">ENTITIES</span>
+            <span class="pauseStatValue" id="pauseEntities">0</span>
+          </div>
+          <div class="pauseStatRow">
+            <span class="pauseStatLabel">DEATHS</span>
+            <span class="pauseStatValue" id="pauseDeathCount">0</span>
+          </div>
+        </div>
+        <div class="settings-group">
+          <div class="setting-item">
+            <span class="setting-label">Skip Death Menu</span>
+            <div class="toggle-switch" id="skipGameMenuToggle"></div>
+          </div>
+          <!-- Theme Toggle -->
+          <div class="setting-item">
+            <span class="setting-label">Light Mode</span>
+            <div class="toggle-switch" id="themeToggle"></div>
+          </div>
+        </div>
+        <div class="pauseTopWords">
+          <div class="pauseWordsToggle" id="pauseWordsToggle"> TOP WORDS <span class="toggleIcon collapsed">▼</span>
+          </div>
+          <div class="pauseWordsContent collapsed" id="pauseWordsContent">
+            <div id="pauseTopWordsList"></div>
+          </div>
+        </div>
+        <div class="pauseButtons">
+          <button id="clobtn" class="pauseBtn primary">CLOSE (Z)</button>
+          <button id="quickSaveBtn" class="pauseBtn">QUICK SAVE (C)</button>
+          <button id="newSaveBtn" class="pauseBtn">NEW SAVE</button>
+          <label for="quickImportFile" class="pauseBtn">LOAD SAVE</label>
+          <button id="exportTopWordsBtn" class="pauseBtn">EXPORT TOP WORDS</button>
+          <input type="file" id="quickImportFile" style="display: none;">
+        </div>
+      </div>
+    </div>
+    <div id="deathScreen">
+      <div id="deathScore">0</div>
+      <div id="respawnText">REPLAY</div>
+    </div>
+    <div id="instructions"> WASD: MOVE | SPACE: SHOOT WORD | Z: COLLECT WORD | X: SHOOT ALL | B: SHOOT WORD | R: DROP
+      WORD | T: DROP ALL | INVISIBLE BLACK HOLE HUNTS OBJECTS </div>
+    <div id="performanceInfo">
+      <div id="fps">FPS 0</div>
+      <div id="entities">ENTITIES 0</div>
+    </div>
+  </div>
+  <script>
+    let canvas, ctx, minimapCanvas, minimapCtx, scoreElement, healthElement, speedElement, coordinatesElement, blackHoleMassElement, fpsElement, entitiesElement, bestWordsListElement, allWordsListElement, wordCountElement, saveStatusElement, wordSearchElement, pauseScreen, pauseScoreElement, pauseHealthElement, pauseSpeedElement, pausePositionElement, pauseEntitiesElement, pauseTopWordsListElement, pauseBlackHoleElement, quickImportFile, newSaveBtn, newSaveModal, newSaveForm, cancelNewSaveBtn, inputWorldWidth, inputWorldHeight, inputentitypeed, inputPlayerHealth, inputPlayerSpeed, newWorldBtn, worldWidth, worldHeight, cameraX, cameraY, viewWidth, viewHeight, maxViewOffset, viewOffsetX, viewOffsetY, targetViewOffsetX, targetViewOffsetY, viewOffsetSmoothness, playerX, playerY, score, health, maxHealth, entity, walls, isDead, isPaused, mouseX, mouseY, mouseInGame, allWords, gameSpeed, lastSpeedIncrease, speedIncreaseInterval, lastTime, frameCount, fps, keys, playerSpeed, playerVx, playerVy, playerAngle, words, numbers, entitypawnInterval;
+    let spacePressed = false;
+    let zPressed = false;
+    let spawnTimeout = null;
+    let lastShootTime = 0;
+    let shootCooldown = 30;
+    let spawnCount = -1;
+    let spawnMax = 3900;
+    let spawnMin = 1400;
+    let inventory = [];
+    let maxInventorySize = 7;
+    let scatteredWords = [];
+    let projectiles = [];
+    let deathCount = 0;
+    let deathCountElement;
+    let skipGameover = false;
+    let isLightMode = false;
+    let initialBlackHoleCount = 1;
+    let spaceHoldFrames = 0;
+    let lastShootFrame = 0;
+    const SHOOT_FRAME_INTERVAL = 3;
+    const ENTITY_TYPE = {
+      NORMAL: 0, NUMBER: 1, SCATTER: 2, WALL: 3, PLAYER: 4,
+      PROJECTILE: 5, SHARD: 6, WRITER: 7
+    };
+
+    const BEHAVIOR = {
+      WANDER: 0,
+      HUNT: 1,
+      EVADE: 2
+    };
+
+    const ENTITY_SIZES = {
+      PLAYER: 18,
+      MONSTER: 20,
+      WALL: 20,
+      SHARD: 15,
+      PROJECTILE: 12
+    };
+
+    const INVULN_FRAMES = 12;
+
+    const BH_X = 0, BH_Y = 1, BH_MASS = 2, BH_ANGLE = 3, BH_TARGET = 4, BH_SPEED = 5, BH_ABS = 6, BH_WA = 7, BH_WT = 8, BH_TT = 9, BH_TI = 10;
+
+    const E_ID = 0, E_WORD = 1, E_X = 2, E_Y = 3, E_VX = 4, E_VY = 5, E_SPEED = 6, E_SIZE = 7, E_TYPE = 8, E_ANGLE = 9,
+      E_BEHAVIOR = 10, E_WANDER_ANGLE = 11, E_WANDER_TIMER = 12, E_WANDER_INTERVAL = 13,
+      E_CAN_THROW = 14, E_CAN_COMB = 15, E_CAN_WALL = 16, E_CAN_ATK = 17,
+      E_IS_THROWING = 18, E_IS_COMBINING = 19, E_TARGET = 20, E_VIEW_DIST = 21,
+      E_SEEN_PLAYER = 22, E_LAST_SEEN_TIME = 23, E_PUSH_FORCE = 24,
+      E_LIFETIME = 25, E_BOUNCE_COUNT = 26, E_INVULN_TIME = 27, E_DAMAGE = 28, E_OWNER = 29, E_INVENTORY = 30, E_SHOOT_COOLDOWN = 31;
+
+    const PLAYER_WIDTH = 32;
+    const PLAYER_HEIGHT = 32;
+    const P_ID = 0;
+    const P_WORD = 1;
+    const P_X = 2;
+    const P_Y = 3;
+    const P_VX = 4;
+    const P_VY = 5;
+    const P_ANGLE = 6;
+    const P_TYPE = 7;
+    const P_DAMAGE = 8;
+    const P_OWNER = 9;
+    const P_PROTECT_TIME = 3;
+    const P_LIFETIME = 11;
+
+    const W_ID = 0;
+    const W_WORD = 1;
+    const W_X = 2;
+    const W_Y = 3;
+    const W_WIDTH = 4;
+    const W_HEIGHT = 5;
+    const W_ANGLE = 6;
+    const S_ID = 0;
+    const S_WORD = 1;
+    const S_X = 2;
+    const S_Y = 3;
+    const S_VX = 4;
+    const S_VY = 5;
+    const S_ANGLE = 6;
+    const S_LIFETIME = 7;
+    let blackHoles = [];
+
+    function init() {
+      canvas = document.getElementById("gameCanvas");
+      ctx = canvas.getContext("2d");
+      minimapCanvas = document.getElementById("minimapCanvas");
+      minimapCtx = minimapCanvas.getContext("2d");
+      scoreElement = document.getElementById("score");
+      healthElement = document.getElementById("health");
+      coordinatesElement = document.getElementById("coordinates");
+      fpsElement = document.getElementById("fps");
+      entitiesElement = document.getElementById("entities");
+      pauseScreen = document.getElementById("pauseScreen");
+      deathCountElement = document.getElementById("deathCount");
+      pauseScoreElement = document.getElementById("pauseScore");
+      pauseHealthElement = document.getElementById("pauseHealth");
+      pausePositionElement = document.getElementById("pausePosition");
+      pauseEntitiesElement = document.getElementById("pauseEntities");
+      pauseTopWordsListElement = document.getElementById("pauseTopWordsList");
+      pauseDeathCountElement = document.getElementById("pauseDeathCount");
+      quickImportFile = document.getElementById("quickImportFile");
+      newSaveBtn = document.getElementById("newSaveBtn");
+      newSaveModal = document.getElementById("newSaveModal");
+      newSaveForm = document.getElementById("newSaveForm");
+      cancelNewSaveBtn = document.getElementById("cancelNewSaveBtn");
+      inputWorldWidth = document.getElementById("inputWorldWidth");
+      inputWorldHeight = document.getElementById("inputWorldHeight");
+      inputPlayerHealth = document.getElementById("inputPlayerHealth");
+      inputPlayerSpeed = document.getElementById("inputPlayerSpeed");
+      newWorldBtn = document.getElementById("newWorldBtn");
+      setupCanvas();
+      setupTheme();
+      worldWidth = 2e4; worldHeight = 2e4; cameraX = 0; cameraY = 0;
+      viewWidth = window.innerWidth; viewHeight = window.innerHeight;
+      maxViewOffset = 150; viewOffsetX = 0; viewOffsetY = 0;
+      targetViewOffsetX = 0; targetViewOffsetY = 0; viewOffsetSmoothness = .15;
+      playerX = worldWidth / 2; playerY = worldHeight / 2; playerAngle = 0;
+
+      blackHoles = [];
+      for (let i = 0; i < initialBlackHoleCount; i++) {
+        blackHoles.push([Math.random() * worldWidth, Math.random() * worldHeight, 1, 0, null, 0.5, 110, Math.random() * 6.283, 0, 0, 300]);
+      }
+
+      score = 0; health = 20; maxHealth = 20;
+      entities = []; walls = []; inventory = [];
+      projectiles = [];
+      isDead = false; isPaused = false;
+      mouseX = viewWidth / 2; mouseY = viewHeight / 2; mouseInGame = true;
+      allWords = []; gameSpeed = .8;
+      lastTime = performance.now(); frameCount = 0; fps = 0;
+      keys = { w: false, a: false, s: false, d: false };
+      playerSpeed = 9, playerVx = 0; playerVy = 0;
+
+      words = ["CAT", "COW", "destiny", "DOG", "MEOW~", ":;'", "2026", "emo", "are", "youself", "myself", "theme", "Brown", "MISS", "Mr", "chicken", "FEED", "{}", "[]", "<></>", "wink", "fell", "EASY", "Hi", "Nice", "job", "could", "their", "sit", "meet", "mean", "tobe", "yet", "Oops", "V.", "blue", "white", "red", "green", "yellow", "pink", "purple", "gray", "black", "break", "predictive", "Over", "BEST", "AWWWWWWWWWWWWWWWWWWWWWWWWWWWW", "Head", "end", "pig", "success", "hurt", "Don't Give Up", "want", "slow", "default", "so", "un", "Please", "Care", "much", "tell", "worse", "bad", "accept", "against", "Hero", "BIRD", "FISH", "LION", "BEAR", "WOLF", "DEER", "interesting", "Character", "color", "SEE", "YOU", "OWO", "I", "are", "do", "by", "at", "is", "'s", "ing", "...", "1234567890", "TREE", "STAR", "MOON", "light", "mystery", "secret", "pack", "SUN", "RAIN", "FIRE", "WIND", "SNOW", "WEATHER", "WOW", "NO", "hug", "heh", "KAWAII", "SENSEI", "right", "EnSimulate", "Attack", "Defence", "protect", "safe", "out", "Determination", "BRAVE", "PATIENCE", "LEFT", "RIGHT", "play", "Now", "learning", "study", "PIXEL", "TOP", "BETTER", "BAD", "large", "sunshine", "whistle", "will", "I'll", "maybe", "October", "Christmas", "November", "August", "July", "June", "March", "February", "April", "January", "ThisIs", "December", "2025/12/17_11AM_54_59", "Sepember", "Hill", ":(", ":)", ":|", "=)", "=|", "=(", "O+O", "O-O", "pretty", "Experience", "Useful", "Cloudy", "Holiday", "Role Play Game", "music", "Romatic", "sound", "Note", "NiceToMeetYou", "score", "health", "Neptune", "line", "link", "mini", "-", "What's", "?!", "fixed", "mixed", "summer", "autumn", "time", "", "was", "famous", "also", "think", "won't", "very", "they", "goes", "cook", "Saturn", "wwwwwwwwwww2", "ZZZZZZZZZZ", "zzzzzzzzzz", "BOOK", "PEN", "DESK", "CHAIR", "DOOR", "WINDOW", "silence", "confident", "FLOOR", "FALL", "HIT", "COLD", "THANK", "-", "KING", "KILL", "YES", "SIR", "LISTEN", "ME", "WHAT", "English", "Miss", "THREE", "FENCE", "PAINT", "WALL", "EIGHT", "SEVEN", "TWO", "OW", "OWL", "EARTH", "NIGHT", "Cheerful", "PERSONALITY", "INDEPENDENT", "TRIP", "TRAVEL", "OPEN", ";p", "COMPUTER", "KEYBOARD", "MONITOR", "PROGRAM", "ALGORITHM", "FUNCTION", "LOVE", "HOPE", "Darkness", "Like", "Halloween~", "HELP", "ANIMATION", "MONSTERS", "DOWN", "SENSE", "BUTTERFLY", "SHOP", "SHEEP", "cos", "sin", "tan", "village", "lava", "town", "jupiter", "plants", "animals", "Fish", "city", "Golem", "story", "terrific", "impressive", "remarkable", "glamorous", "extra-ordinary", "appealing", "outstanding", "awesome", "strong", "delicious", "~^`", "solution", "Eve", "mistake", "zero", "seem", "tasty", "were", "syllable", "future", "cancel", "there", "say", "well"];
+      numbers = ["-10", "-9", "-8", "-7", "-6", "-5", "-4", "-3", "-2", "-1", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
+
+      setupEventListeners();
+      loadSaveData();
+      spawnMonster();
+      entities.forEach(n => { n[E_SPEED] *= 1.02 });
+      gameLoop();
+      monsterSpawnInterval = setInterval(() => { isDead || isPaused || spawnMonster() }, 2000 / gameSpeed);
+      setInterval(() => { fps = frameCount, frameCount = 0, fpsElement.textContent = `FPS ${fps}` }, 1e3);
+    }
+
+
+    function setupTheme() {
+      const styleTag = document.createElement('style');
+      styleTag.id = 'dynamic-theme-styles';
+      document.head.appendChild(styleTag);
+
+      const savedTheme = localStorage.getItem("gameTheme");
+      if (savedTheme === 'light') {
+        isLightMode = true;
+        document.body.classList.add('light-mode');
+        updateThemeStyles();
+        const themeToggle = document.getElementById("themeToggle");
+        if (themeToggle) themeToggle.classList.add("active");
+      }
+    }
+
+    function updateThemeStyles() {
+      const styleTag = document.getElementById('dynamic-theme-styles');
+      if (!styleTag) return;
+
+      if (isLightMode) {
+        styleTag.innerHTML = `
+		      body { background: #e0e0e0 !important; color: #333 !important; }
+		      #gameContainer { background: #f5f5f5 !important; }
+		      #gameUI, #score, #health, #coordinates, #deathCount { color: #333 !important; }
+		      #shortcuts, #instructions { color: #555 !important; }
+		      #performanceInfo { color: #666 !important; }
+		      
+		      #pauseScreen { background: rgba(255,255,255,0.9) !important; }
+		      #pauseTitle, .pauseStatValue, .pauseBtn, button, .pauseWordsToggle { color: #000 !important; }
+		      .pauseStatLabel { color: #555 !important; }
+		      .pauseWordEntry { border-bottom: 1px solid rgba(0,0,0,0.1) !important; }
+		      #deathScreen { background: rgba(255,255,255,0.8) !important; }
+		      #deathScore, #respawnText { color: #000 !important; }
+		      .toggle-switch { border-color: #333 !important; }
+		      .toggle-switch::after { background: #333 !important; }
+		      .modalInput, input[type="text"], input[type="number"] { border-bottom: 1px solid #333 !important; color: #333 !important; }
+		      .input-group label { color: #555 !important; }
+		    `;
+      } else {
+        styleTag.innerHTML = ``;
+      }
+    }
+
+    function toggleTheme() {
+      isLightMode = !isLightMode;
+      if (isLightMode) {
+        document.body.classList.add('light-mode');
+        localStorage.setItem("gameTheme", "light");
+      } else {
+        document.body.classList.remove('light-mode');
+        localStorage.setItem("gameTheme", "dark");
+      }
+      updateThemeStyles();
+    }
+
+
+    function setupCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      minimapCanvas.width = 200;
+      minimapCanvas.height = 150;
+      window.addEventListener("resize", () => {
+        canvas.width = window.innerWidth, canvas.height = window.innerHeight, viewWidth = canvas.width, viewHeight = canvas.height
+      })
+    }
+
+    function loadSaveData() {
+      const n = localStorage.getItem("lvGameSave");
+      if (n) try {
+        const t = JSON.parse(n);
+        t.allWords && Array.isArray(t.allWords) && (allWords = t.allWords)
+      } catch (t) {
+        console.error("Failed to load save data:", t)
+      }
+    }
+
+    function saveGameData() {
+      const n = {
+        allWords: allWords,
+        timestamp: Date.now()
+      };
+      localStorage.setItem("lvGameSave", JSON.stringify(n))
+    }
+
+    function exportSave() {
+      if (allWords.length !== 0) {
+        const sortedWords = [...allWords].sort((n, t) => n.length !== t.length ? t.length - n.length : t.count - n.count);
+        const now = new Date();
+        let n = now.getFullYear() + "/" + String(now.getMonth() + 1) + "/" + String(now.getDate()) + " / " + String(now.getHours()) + ":" + String(now.getMinutes()) + ":" + String(now.getSeconds()) + "\n\n";
+
+        sortedWords.forEach((word, index) => {
+          n += `TOP ${index + 1} ${word.text}  |  l: ${word.length}, count: ${word.count}\n`;
+        });
+
+        const f = new Blob([n], {
+          type: "text/plain"
+        }),
+          i = URL.createObjectURL(f),
+          t = document.createElement("a");
+        t.href = i;
+        t.download = `WordVs_record_${Date.now()}.txt`;
+        document.body.appendChild(t);
+        t.click();
+        document.body.removeChild(t);
+        URL.revokeObjectURL(i)
+      }
+    }
+
+    function importSave(n) {
+      const t = new FileReader;
+      t.onload = n => {
+        const t = n.target.result;
+        parseImportData(t)
+      };
+      t.readAsText(n)
+    }
+
+    function parseImportData(n) {
+      try {
+        const i = n.split("\n"),
+          t = [];
+        i.forEach(n => {
+          const i = n.match(/^(.+)\s+TOP(\d+)$/);
+          if (i) {
+            const n = i[1].trim(),
+              r = parseInt(i[2]);
+            if (n && r >= 1 && r <= 10) {
+              const i = t.findIndex(t => t.text === n);
+              i === -1 ? t.push({
+                text: n,
+                length: n.length,
+                count: 1
+              }) : t[i].count++
+            }
+          }
+        });
+        t.length > 0 && (t.forEach(n => {
+          const t = allWords.findIndex(t => t.text === n.text);
+          t !== -1 ? allWords[t].count += n.count : allWords.push(n)
+        }), saveGameData(), displayBestWords())
+      } catch (t) {
+        console.error("Failed to parse import data:", t)
+      }
+    }
+
+    function clearSave() {
+      confirm("Are you sure you want to clear all saved words?") && (allWords = [], localStorage.removeItem("lvGameSave"), displayBestWords())
+    }
+
+    function quickSave() {
+      if (!isDead) {
+        const saveData = [];
+        saveData.push(playerX); saveData.push(playerY); saveData.push(playerSpeed);
+        saveData.push(deathCount); saveData.push(score); saveData.push(health);
+        saveData.push(gameSpeed); saveData.push(worldWidth); saveData.push(worldHeight); saveData.push(playerAngle);
+
+
+        saveData.push(blackHoles.length);
+        blackHoles.forEach(bh => {
+          saveData.push(bh[BH_X]); saveData.push(bh[BH_Y]); saveData.push(bh[BH_MASS]); saveData.push(bh[BH_ANGLE]);
+          saveData.push(bh[BH_SPEED]); saveData.push(bh[BH_ABS]); saveData.push(bh[BH_WA]); saveData.push(bh[BH_WT]);
+          saveData.push(bh[BH_TT]); saveData.push(bh[BH_TI]);
+        });
+
+
+        saveData.push(spawnCount); saveData.push(spawnMax); saveData.push(spawnMin); saveData.push(maxInventorySize);
+
+
+        saveData.push(entities.length);
+        entities.forEach(e => {
+          saveData.push(e[E_TYPE]);
+          saveData.push(e.length);
+          for (let k = 0; k < e.length; k++) saveData.push(e[k]);
+        });
+
+
+        saveData.push(projectiles.length);
+        projectiles.forEach(p => {
+          saveData.push(p[P_ID]);
+          saveData.push(p[P_WORD]);
+          saveData.push(p[P_X]);
+          saveData.push(p[P_Y]);
+          saveData.push(p[P_VX]);
+          saveData.push(p[P_VY]);
+          saveData.push(p[P_ANGLE]);
+          saveData.push(p[P_TYPE]);
+          saveData.push(p[P_DAMAGE]);
+          saveData.push(p[P_OWNER]);
+          saveData.push(p[P_PROTECT_TIME]);
+          saveData.push(p[P_LIFETIME]);
+        });
+
+
+        saveData.push(walls.length);
+        walls.forEach(wall => {
+          saveData.push(wall[W_ID]);
+          saveData.push(wall[W_WORD]);
+          saveData.push(wall[W_X]);
+          saveData.push(wall[W_Y]);
+          saveData.push(wall[W_WIDTH]);
+          saveData.push(wall[W_HEIGHT]);
+          saveData.push(wall[W_ANGLE]);
+        });
+
+        saveData.push(scatteredWords.length);
+        scatteredWords.forEach(w => {
+          saveData.push(w[S_ID]);
+          saveData.push(w[S_WORD]);
+          saveData.push(w[S_X]);
+          saveData.push(w[S_Y]);
+          saveData.push(w[S_VX]);
+          saveData.push(w[S_VY]);
+          saveData.push(w[S_ANGLE]);
+          saveData.push(w[S_LIFETIME]);
+        });
+
+
+        saveData.push(inventory.length);
+        inventory.forEach(word => { saveData.push(word); });
+
+        const dataString = saveData.join('\n');
+        localStorage.setItem("lvQuickSave", dataString);
+        const blob = new Blob([dataString], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a"); a.href = url; a.download = `enSimulate_${Date.now()}.txt`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      }
+    }
+
+
+    function quickLoad(file) {
+      const loadData = (data) => {
+        const lines = data.split('\n');
+        let idx = 0;
+
+        const next = () => {
+          if (idx >= lines.length) return "";
+          return lines[idx++];
+        };
+
+        const nextNum = (def = 0) => {
+          const val = parseFloat(next());
+          return isNaN(val) ? def : val;
+        };
+
+        const nextInt = (def = 0) => {
+          const val = parseInt(next());
+          return isNaN(val) ? def : val;
+        };
+
+        const nextStr = (def = "") => {
+          const val = next();
+          return val === undefined || val === "" ? def : val;
+        };
+
+
+        playerX = nextNum(worldWidth / 2);
+        playerY = nextNum(worldHeight / 2);
+        playerSpeed = nextNum(7);
+        deathCount = nextNum(0);
+        score = nextNum(0);
+        health = nextNum(20);
+        gameSpeed = nextNum(0.8);
+        worldWidth = nextNum(20000);
+        worldHeight = nextNum(20000);
+        playerAngle = nextNum(0);
+
+
+        blackHoles = [];
+        const bhCount = Math.min(nextInt(0), 50);
+        for (let b = 0; b < bhCount; b++) {
+          blackHoles.push([
+            nextNum(worldWidth / 2),
+            nextNum(worldHeight / 2),
+            nextNum(1),
+            nextNum(0),
+            null,
+            nextNum(0.5),
+            nextNum(110),
+            nextNum(Math.random() * 6.283),
+            nextNum(0),
+            nextNum(0),
+            nextNum(300)
+          ]);
+        }
+
+
+        spawnCount = nextInt(-1);
+        spawnMax = nextInt(3900);
+        spawnMin = nextInt(1400);
+        maxInventorySize = Math.min(nextInt(7), 50);
+
+
+        entities = [];
+        walls = [];
+        scatteredWords = [];
+        inventory = [];
+
+
+        const entityCount = Math.min(nextInt(0), 5000);
+        for (let j = 0; j < entityCount; j++) {
+          const type = nextInt(ENTITY_TYPE.NORMAL);
+          const len = Math.min(nextInt(50), 50);
+          const e = [];
+          for (let k = 0; k < len; k++) {
+            if (k === E_WORD) {
+              e.push(nextStr(""));
+            } else {
+              e.push(nextNum(0));
+            }
+          }
+          while (e.length < 32) e.push(0);
+          e[E_TYPE] = type;
+          entities.push(e);
+        }
+
+
+        const projectileCount = Math.min(nextInt(0), 2000);
+        projectiles = [];
+        for (let i = 0; i < projectileCount; i++) {
+          const id = nextNum();
+          const word = nextStr("");
+          const x = nextNum();
+          const y = nextNum();
+          const vx = nextNum();
+          const vy = nextNum();
+          const angle = nextNum();
+          const type = nextInt(0);
+          const damage = nextNum(1);
+          const owner = nextNum(0);
+          const protectTime = nextNum(60);
+          const lifetime = nextNum(1800);
+
+          projectiles.push([id, word, x, y, vx, vy, angle, type, damage, owner, protectTime, lifetime]);
+        }
+
+
+        const wallCount = Math.min(nextInt(0), 500);
+        for (let j = 0; j < wallCount; j++) {
+          const wallId = nextNum();
+          const wallWord = nextStr("");
+          const wallX = nextNum();
+          const wallY = nextNum();
+          const wallWidth = nextNum();
+          const wallHeight = nextNum();
+          const wallAngle = nextNum();
+
+          if (wallWord && wallWord.length > 0 && wallWidth > 0 && wallHeight > 0) {
+            walls.push([wallId, wallWord, wallX, wallY, wallWidth, wallHeight, wallAngle]);
+          }
+        }
+
+
+        const scatterCount = Math.min(nextInt(0), 2000);
+        for (let i = 0; i < scatterCount; i++) {
+          const id = nextNum();
+          const word = nextStr("");
+          const x = nextNum();
+          const y = nextNum();
+          const vx = nextNum();
+          const vy = nextNum();
+          const angle = nextNum();
+          const lifetime = nextNum(1800);
+
+          if (word && word.length > 0) {
+            scatteredWords.push([id, word, x, y, vx, vy, angle, lifetime]);
+          }
+        }
+
+
+        const inventoryCount = Math.min(nextInt(0), 50);
+        for (let j = 0; j < inventoryCount; j++) {
+          const word = nextStr("");
+          if (word) inventory.push(word);
+        }
+
+
+        updateScore();
+        updateHealth();
+        if (deathCountElement) deathCountElement.textContent = `DEATHS ${deathCount}`;
+        if (pauseDeathCountElement) pauseDeathCountElement.textContent = deathCount;
+        if (coordinatesElement) coordinatesElement.textContent = `X ${Math.floor(playerX)}, Y ${Math.floor(playerY)}`;
+
+        updateCamera();
+
+
+        if (monsterSpawnInterval) clearInterval(monsterSpawnInterval);
+        monsterSpawnInterval = setInterval(() => {
+          if (!isDead && !isPaused) spawnMonster();
+        }, 2000 / gameSpeed);
+
+        scheduleNextSpawn();
+      };
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          loadData(event.target.result);
+          isPaused = false;
+          if (pauseScreen) pauseScreen.classList.remove('visible');
+        };
+        reader.onerror = (e) => console.error("File Loader Failed", e);
+        reader.readAsText(file);
+      } else {
+        const data = localStorage.getItem("lvQuickSave");
+        if (data) {
+          loadData(data);
+          isPaused = false;
+          if (pauseScreen) pauseScreen.classList.remove('visible');
+        }
+      }
+    }
+
+
+
+
+    function pauseGame() {
+      if (!isDead) {
+        isPaused = true;
+        updatePauseMenuStats();
+        updatePauseTopWords();
+        pauseScreen.style.display = "flex";
+        setTimeout(() => pauseScreen.classList.add('visible'), 10);
+      }
+    }
+
+    function updatePauseMenuStats() {
+      pauseScoreElement.textContent = score;
+      pauseHealthElement.textContent = health;
+      pausePositionElement.textContent = `X ${Math.floor(playerX)}, Y ${Math.floor(playerY)}`;
+      pauseEntitiesElement.textContent = entities.length + walls.length;
+      pauseDeathCountElement.textContent = deathCount;
+    }
+
+    function updatePauseTopWords() {
+      pauseTopWordsListElement.innerHTML = "";
+      if (allWords.length === 0) {
+        pauseTopWordsListElement.innerHTML = '<div class="noWords">No words created yet</div>';
+        return;
+      }
+      const sortedWords = [...allWords].sort((a, b) => a.length !== b.length ? b.length - a.length : b.count - a.count);
+      const top10Words = sortedWords.slice(0, 10);
+      top10Words.forEach((word, index) => {
+        const entryDiv = document.createElement("div");
+        entryDiv.className = "pauseWordEntry";
+        const rankSpan = document.createElement("span"); rankSpan.className = "pauseWordRank"; rankSpan.textContent = `TOP ${index + 1}`;
+        const textSpan = document.createElement("span"); textSpan.className = "pauseWordText"; textSpan.textContent = word.text;
+        const lengthSpan = document.createElement("span"); lengthSpan.className = "pauseWordLength"; lengthSpan.textContent = word.length;
+        entryDiv.appendChild(rankSpan); entryDiv.appendChild(textSpan); entryDiv.appendChild(lengthSpan);
+        pauseTopWordsListElement.appendChild(entryDiv);
+      });
+    }
+
+    function resumeGame() {
+      isPaused = false;
+
+      spacePressed = false;
+      keys = { w: false, a: false, s: false, d: false };
+
+      pauseScreen.classList.remove('visible');
+      setTimeout(() => { if (!pauseScreen.classList.contains('visible')) pauseScreen.style.display = "none"; }, 300);
+    }
+
+    function wrapText(n, t) {
+      const r = n.split(""), u = [];
+      let i = "";
+      for (let n = 0; n < r.length; n++) i.length >= t ? (u.push(i), i = r[n]) : i += r[n];
+      return i && u.push(i), u
+    }
+
+    function hideNewSaveModal() {
+      newSaveModal.classList.remove('visible');
+      setTimeout(() => { newSaveModal.style.display = "none"; }, 100);
+    }
+
+    function showNewSaveModal() {
+      if (!isPaused && !isDead) pauseGame();
+      if (!inputSpawnCount || !inputSpawnMin || !inputSpawnMax) return;
+      inputSpawnCount.value = spawnCount;
+      inputSpawnMin.value = spawnMin;
+      inputSpawnMax.value = spawnMax;
+      inputPlayerHealth.value = health;
+      inputPlayerSpeed.value = playerSpeed;
+      inputWorldWidth.value = worldWidth;
+      inputWorldHeight.value = worldHeight;
+
+
+      document.getElementById("inputBlackHoleCount").value = initialBlackHoleCount;
+
+      newSaveModal.style.display = "flex";
+      setTimeout(() => newSaveModal.classList.add('visible'), 10);
+    }
+
+    function createNewWorld() {
+      clearInterval(monsterSpawnInterval);
+      if (spawnTimeout) clearTimeout(spawnTimeout);
+      const newSpawnCount = parseInt(inputSpawnCount.value) ?? -1;
+      const newPlayerHealth = parseInt(inputPlayerHealth.value) ?? 20;
+      const newPlayerSpeed = parseFloat(inputPlayerSpeed.value) ?? 10;
+      const newWorldWidth = parseInt(inputWorldWidth.value) ?? 5000;
+      const newWorldHeight = parseInt(inputWorldHeight.value) ?? 5000;
+      const newSpawnMin = parseInt(inputSpawnMin.value) ?? 1000;
+      const newSpawnMax = parseInt(inputSpawnMax.value) ?? 3000;
+
+      const parsed = parseInt(document.getElementById("inputBlackHoleCount").value);
+      initialBlackHoleCount = isNaN(parsed) ? 1 : parsed;
+
+      entities = []; walls = []; inventory = []; allWords = [];
+      worldWidth = newWorldWidth; worldHeight = newWorldHeight;
+      playerX = worldWidth / 2; playerY = worldHeight / 2; playerAngle = 0; cameraX = 0; cameraY = 0;
+      score = 0; health = newPlayerHealth; maxHealth = newPlayerHealth; playerSpeed = newPlayerSpeed;
+      gameSpeed = 0.8; isDead = false; isPaused = false;
+      spawnCount = newSpawnCount; spawnMin = newSpawnMin; spawnMax = newSpawnMax; deathCount = 0;
+
+      blackHoles = [];
+      for (let i = 0; i < initialBlackHoleCount; i++) {
+        blackHoles.push([Math.random() * worldWidth, Math.random() * worldHeight, 1, 0, null, 0.5, 110, Math.random() * 6.283, 0, 0, 300]);
+      }
+
+      updateScore(); updateHealth(); updateDeathCount();
+      coordinatesElement.textContent = `X ${Math.floor(playerX)}, Y ${Math.floor(playerY)}`;
+
+      hideNewSaveModal();
+      pauseScreen.classList.remove('visible');
+      pauseScreen.style.display = "none";
+
+      const deathScreen = document.getElementById("deathScreen");
+      if (deathScreen) { deathScreen.classList.remove('visible'); deathScreen.style.display = "none"; }
+
+      scheduleNextSpawn();
+    }
+
+    function setupEventListeners() {
+
+      const elements = {
+        pauseWordsToggle: document.getElementById("pauseWordsToggle"),
+        skipGameMenuToggle: document.getElementById("skipGameMenuToggle"),
+        themeToggle: document.getElementById("themeToggle"),
+        newSaveBtn: document.getElementById("newSaveBtn"),
+        cancelNewSaveBtn: document.getElementById("cancelNewSaveBtn"),
+        newWorldBtn: document.getElementById("newWorldBtn"),
+        respawnText: document.getElementById("respawnText"),
+        clobtn: document.getElementById("clobtn"),
+        quickSaveBtn: document.getElementById("quickSaveBtn"),
+        quickImportFile: document.getElementById("quickImportFile"),
+        exportTopWordsBtn: document.getElementById("exportTopWordsBtn")
+      };
+
+
+      if (elements.themeToggle) {
+        elements.themeToggle.addEventListener("click", toggleTheme);
+        if (isLightMode) elements.themeToggle.classList.add("active");
+      }
+
+
+      if (elements.pauseWordsToggle) {
+        elements.pauseWordsToggle.addEventListener("click", function () {
+          const content = document.getElementById("pauseWordsContent");
+          const icon = this.querySelector(".toggleIcon");
+          content.classList.toggle("collapsed");
+          icon.classList.toggle("collapsed");
+        });
+      }
+
+
+      if (elements.skipGameMenuToggle) {
+        elements.skipGameMenuToggle.addEventListener("click", function () {
+          skipGameover = !skipGameover;
+          this.classList.toggle("active");
+          localStorage.setItem("skipGameMenu", skipGameover);
+        });
+      }
+
+
+      if (elements.newSaveBtn) elements.newSaveBtn.addEventListener("click", () => showNewSaveModal());
+      if (elements.cancelNewSaveBtn) elements.cancelNewSaveBtn.addEventListener("click", () => hideNewSaveModal());
+      if (elements.newWorldBtn) elements.newWorldBtn.addEventListener("click", () => {
+        createNewWorld();
+        updateDeathCount();
+      });
+
+
+      if (elements.respawnText) elements.respawnText.addEventListener("click", () => {
+        hideDeathScreen();
+        respawnPlayer();
+      });
+
+
+      if (elements.clobtn) elements.clobtn.addEventListener("click", () => resumeGame());
+
+
+      if (elements.quickSaveBtn) {
+        elements.quickSaveBtn.addEventListener("click", () => {
+          quickSave();
+          const dataString = localStorage.getItem("lvQuickSave");
+          if (dataString) {
+            const downloadLink = document.createElement('a');
+            downloadLink.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(dataString);
+            downloadLink.download = `enSimu_${Date.now()}.txt`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+          }
+        });
+      }
+
+
+      if (elements.quickImportFile) {
+        elements.quickImportFile.addEventListener("change", n => {
+          const file = n.target.files[0];
+          if (file) quickLoad(file);
+          n.target.value = "";
+        });
+      }
+
+
+      if (elements.exportTopWordsBtn) {
+        elements.exportTopWordsBtn.addEventListener("click", () => exportSave());
+      }
+
+
+      canvas.addEventListener("mousemove", n => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = n.clientX - rect.left;
+        mouseY = n.clientY - rect.top;
+        mouseInGame = true;
+        updateViewOffset();
+      });
+
+      canvas.addEventListener("mouseenter", () => mouseInGame = true);
+      canvas.addEventListener("mouseleave", () => mouseInGame = false);
+
+      document.addEventListener("mousemove", n => {
+        if (!mouseInGame) {
+          const rect = canvas.getBoundingClientRect();
+          let x = n.clientX - rect.left;
+          let y = n.clientY - rect.top;
+          mouseX = x < 0 ? 0 : x > viewWidth ? viewWidth : x;
+          mouseY = y < 0 ? 0 : y > viewHeight ? viewHeight : y;
+          updateViewOffset();
+        }
+      });
+
+
+      document.addEventListener("keydown", n => {
+        const key = n.key.toLowerCase();
+
+
+        if (key === "n") {
+          n.preventDefault();
+          quickSave();
+          return;
+        }
+
+
+        if (key === "p") {
+          n.preventDefault();
+          if (!isPaused) pauseGame();
+          return;
+        }
+
+
+        if (key === "z") {
+          n.preventDefault();
+          zPressed = true;
+        }
+
+
+        if (key === "v") {
+          const uiElements = ["gameUI", "minimap", "instructions", "shortcuts", "performanceInfo"];
+          const firstElement = document.getElementById(uiElements[0]);
+
+          if (!firstElement.fadeInterval) {
+            const currentOpacity = parseFloat(firstElement.style.opacity) || 1;
+            const isHidden = currentOpacity <= 0;
+
+            uiElements.forEach(elementId => {
+              const element = document.getElementById(elementId);
+              if (!element.fadeInterval) {
+                if (isHidden) {
+
+                  let opacity = 0;
+                  element.fadeInterval = setInterval(() => {
+                    opacity += 0.1;
+                    element.style.opacity = opacity;
+                    const targetOpacity = elementId === "instructions" ? 0.7 : 1;
+                    if (opacity >= targetOpacity) {
+                      clearInterval(element.fadeInterval);
+                      element.fadeInterval = null;
+                      element.style.pointerEvents = "auto";
+                    }
+                  }, 20);
+                } else {
+
+                  let opacity = parseFloat(element.style.opacity) || (elementId === "instructions" ? 0.7 : 1);
+                  element.fadeInterval = setInterval(() => {
+                    opacity -= 0.1;
+                    element.style.opacity = opacity;
+                    if (opacity <= 0) {
+                      clearInterval(element.fadeInterval);
+                      element.fadeInterval = null;
+                      element.style.pointerEvents = "none";
+                    }
+                  }, 20);
+                }
+              }
+            });
+          }
+          return;
+        }
+
+
+        if (key === " ") {
+          n.preventDefault();
+          if (!isPaused && !isDead && inventory.length > 0) {
+            spaceHoldFrames = 1;
+            shootFirstInventoryWord();
+            lastShootFrame = 0;
+          }
+          return;
+        }
+
+
+        if (key === "x") {
+          n.preventDefault();
+          if (!isPaused && !isDead) shootAllInventoryWords();
+          return;
+        }
+
+
+        if (key === "t") {
+          n.preventDefault();
+          if (!isPaused && !isDead) dropFirstWord();
+          return;
+        }
+
+
+        if (key === "r") {
+          n.preventDefault();
+          if (!isPaused && !isDead) dropAllInventoryWords();
+          return;
+        }
+
+
+        if (key === "l") {
+          n.preventDefault();
+          if (!isDead && !isPaused) {
+            const importFile = document.getElementById("quickImportFile");
+            if (importFile) importFile.click();
+          }
+          return;
+        }
+
+
+        if (!isDead && !isPaused && key in keys) {
+          keys[key] = true;
+          n.preventDefault();
+        }
+      });
+
+
+      document.addEventListener("keyup", n => {
+        const key = n.key.toLowerCase();
+
+
+        if (key === "z") {
+          n.preventDefault();
+          zPressed = false;
+        }
+
+        if (key === " ") {
+          spaceHoldFrames = 0;
+          lastShootFrame = 0;
+          n.preventDefault();
+        }
+
+
+        if (key in keys) {
+          keys[key] = false;
+          n.preventDefault();
+        }
+      });
+    }
+
+
+    function updateViewOffset() {
+      const n = viewWidth / 2, t = viewHeight / 2, r = (mouseX - n) / n, u = (mouseY - t) / t;
+      targetViewOffsetX = r * maxViewOffset;
+      targetViewOffsetY = u * maxViewOffset;
+
+      const iSq = targetViewOffsetX * targetViewOffsetX + targetViewOffsetY * targetViewOffsetY;
+
+
+
+      if (iSq > maxViewOffset * maxViewOffset) {
+        const scale = maxViewOffset / (iSq + 0.001) * Math.sqrt(iSq + 0.001);
+
+
+
+        const roughScale = maxViewOffset / (Math.abs(targetViewOffsetX) + Math.abs(targetViewOffsetY));
+        targetViewOffsetX *= roughScale;
+        targetViewOffsetY *= roughScale;
+      }
+    }
+
+
+    function smoothUpdateViewOffset() { viewOffsetX += (targetViewOffsetX - viewOffsetX) * viewOffsetSmoothness; viewOffsetY += (targetViewOffsetY - viewOffsetY) * viewOffsetSmoothness }
+
+    function updateCamera() {
+      smoothUpdateViewOffset();
+      let n = playerX - viewWidth / 2 + viewOffsetX, t = playerY - viewHeight / 2 + viewOffsetY;
+      if (cameraX = Math.max(0, Math.min(worldWidth - viewWidth, n)), cameraY = Math.max(0, Math.min(worldHeight - viewHeight, t)), cameraX !== n) { const n = playerX - cameraX, t = viewWidth / 2, i = t - n; viewOffsetX += i * .1; viewOffsetX = Math.max(-maxViewOffset, Math.min(maxViewOffset, viewOffsetX)) }
+      if (cameraY !== t) { const n = playerY - cameraY, t = viewHeight / 2, i = t - n; viewOffsetY += i * .1; viewOffsetY = Math.max(-maxViewOffset, Math.min(maxViewOffset, viewOffsetY)) }
+    }
+
+    const skillChance = 0.4;
+    function scheduleNextSpawn() {
+      if (spawnTimeout) clearTimeout(spawnTimeout);
+
+      if (isDead) return;
+
+
+      if (spawnCount === 0) return;
+
+      const minInterval = Math.max(100, spawnMin || 1000);
+      const maxInterval = Math.max(minInterval + 100, spawnMax || 3000);
+      const randomDelay = Math.random() * (maxInterval - minInterval) + minInterval;
+
+      spawnTimeout = setTimeout(() => {
+        if (!isDead) {
+          if (!isPaused) {
+            spawnMonster();
+          } else {
+            scheduleNextSpawn();
+          }
+        }
+      }, randomDelay / gameSpeed);
+    }
+
+    function spawnMonster() {
+      if (spawnCount > 0) {
+        spawnCount--;
+      } else if (spawnCount === 0) {
+        return;
+      }
+
+      const isNumber = Math.random() < 0.3;
+      let type = ENTITY_TYPE.NORMAL;
+
+      if (isNumber) {
+        type = ENTITY_TYPE.NUMBER;
+      } else if (Math.random() < 0.2) {
+        type = ENTITY_TYPE.SCATTER;
+      } else if (Math.random() < 0.1) {
+        type = ENTITY_TYPE.WRITER;
+      }
+
+      let chosenWord = isNumber ? numbers[Math.floor(Math.random() * numbers.length)] : words[Math.floor(Math.random() * words.length)];
+
+      let spawnX, spawnY;
+      const spawnDistance = 900;
+      do { const angle = Math.random() * Math.PI * 2; spawnX = playerX + Math.cos(angle) * spawnDistance; spawnY = playerY + Math.sin(angle) * spawnDistance; } while (isInView(spawnX, spawnY));
+
+
+      if (type === ENTITY_TYPE.SCATTER) {
+
+        scatteredWords.push([
+          Date.now() + Math.random(),
+          chosenWord,
+          spawnX,
+          spawnY,
+          0,
+          0,
+          Math.random()*360,
+          1800
+        ]);
+      } else {
+        let canAtk;
+        if (type === ENTITY_TYPE.WRITER) canAtk = false;
+        else if (type === ENTITY_TYPE.NUMBER) canAtk = Math.random() < 0.05;
+        else canAtk = Math.random() < 0.4;
+
+        entities.push([
+          Date.now() + Math.random(), chosenWord, spawnX, spawnY,
+          isNumber ? (Math.random() - 0.5) * 2 : 0, isNumber ? (Math.random() - 0.5) * 2 : 0,
+          (0.8 + Math.random() * 0.3) * gameSpeed, 20, type, 0,
+          BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60,
+          !isNumber && Math.random() < 0.05,
+          !isNumber && Math.random() < 0.4,
+          !isNumber && Math.random() < 0.3,
+          canAtk,
+          false,
+          false,
+          null,
+          300,
+          false,
+          0,
+          isNumber ? 3 : 0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          type === ENTITY_TYPE.WRITER ? [] : null,
+          0
+        ]);
+      }
+
+      if (!isDead && !isPaused && spawnCount !== 0) { scheduleNextSpawn(); }
+    }
+
+
+
+
+    function shootFirstInventoryWord() {
+
+      if (isDead || isPaused) return;
+      if (inventory.length === 0) return;
+
+      const word = inventory.shift();
+      if (!word || word.length === 0) return;
+
+
+      const worldMouseX = mouseX + cameraX;
+      const worldMouseY = mouseY + cameraY;
+      const dx = worldMouseX - playerX;
+      const dy = worldMouseY - playerY;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length < 0.001) return;
+
+      const dirX = dx / length;
+      const dirY = dy / length;
+      const bulletSpeed = 19;
+      const vx = dirX * bulletSpeed;
+      const vy = dirY * bulletSpeed;
+      const angle = Math.atan2(vy, vx) * 180 / Math.PI;
+
+      projectiles.push([
+        Date.now() + Math.random(),
+        word,
+        playerX + dirX * 25,
+        playerY + dirY * 25,
+        vx, vy, angle,
+        0,
+        word.length,
+        0,
+        5,
+        1800
+      ]);
+
+      score += 1;
+      updateScore();
+    }
+
+
+    let shootingQueue = false;
+    let shootingTimer = null;
+
+    function shootAllInventoryWords() {
+      if (inventory.length === 0) return;
+      if (isDead || isPaused) return;
+
+
+      if (shootingTimer) {
+        clearTimeout(shootingTimer);
+        shootingTimer = null;
+      }
+
+      const wordsToShoot = [...inventory];
+      inventory = [];
+      let index = 0;
+
+      function shootNext() {
+        if (index >= wordsToShoot.length) {
+          shootingTimer = null;
+          return;
+        }
+
+        const word = wordsToShoot[index];
+        index++;
+
+
+        const worldMouseX = mouseX + cameraX;
+        const worldMouseY = mouseY + cameraY;
+        let dx = worldMouseX - playerX;
+        let dy = worldMouseY - playerY;
+        const length = dx * dx + dy * dy;
+
+        if (length > 0.001) {
+          const dirX = dx / length;
+          const dirY = dy / length;
+          const bulletSpeed = 19;
+
+          projectiles.push([
+            Date.now() + Math.random(),
+            word,
+            playerX + dirX * 25,
+            playerY + dirY * 25,
+            dirX * bulletSpeed,
+            dirY * bulletSpeed,
+            Math.atan2(dy, dx) * 180 / Math.PI,
+            0,
+            word.length,
+            0,
+            5,
+            1800
+          ]);
+
+          score += 1;
+          updateScore();
+        }
+
+
+        shootingTimer = setTimeout(shootNext, 30);
+      }
+
+      shootNext();
+    }
+
+
+
+    function dropFirstWord() {
+      if (inventory.length === 0) return;
+      const word = inventory.shift();
+
+      scatteredWords.push([
+        Date.now() + Math.random(),
+        word,
+        playerX,
+        playerY,
+        0,
+        0,
+        Math.random() * 360,
+        1800
+      ]);
+    }
+
+    function dropAllInventoryWords() {
+      if (inventory.length === 0) return;
+      const wordsToDrop = [...inventory];
+      inventory = [];
+
+      wordsToDrop.forEach((word, index) => {
+        setTimeout(() => {
+          scatteredWords.push([
+            Date.now() + Math.random() + index,
+            word,
+            playerX,
+            playerY,
+            0,
+            0,
+            playerAngle,
+            1800
+          ]);
+        }, index * 50);
+      });
+    }
+
+    function dropInventoryOnDeath(x, y, wordsArray) {
+      if (!wordsArray || wordsArray.length === 0) return;
+
+      wordsArray.forEach(word => {
+        const wordText = typeof word === 'string' ? word : String(word);
+        scatteredWords.push([
+          Date.now() + Math.random(),
+          wordText,
+          x,
+          y,
+          0,
+          0,
+          playerAngle,
+          1800
+        ]);
+      });
+    }
+
+    function updateScatteredWords() {
+      for (let i = 0; i < scatteredWords.length; i++) {
+        const w = scatteredWords[i];
+
+        w[S_LIFETIME]--;
+        if (w[S_LIFETIME] <= 0) {
+          scatteredWords.splice(i, 1);
+          i--;
+          continue;
+        }
+
+
+        const gravityForce = calculateGravitationalForce(w[S_X], w[S_Y], w[S_VX], w[S_VY]);
+        w[S_VX] += gravityForce.x * 0.8;
+        w[S_VY] += gravityForce.y * 0.8;
+
+
+        const maxSpeed = 8;
+        const maxSpeedSq = maxSpeed * maxSpeed;
+        const speedSq = w[S_VX] * w[S_VX] + w[S_VY] * w[S_VY];
+
+        if (speedSq > maxSpeedSq) {
+
+
+          const scale = maxSpeedSq / (speedSq + 0.0001);
+          w[S_VX] *= scale;
+          w[S_VY] *= scale;
+        }
+
+
+        w[S_X] += w[S_VX];
+        w[S_Y] += w[S_VY];
+
+
+        if (Math.abs(w[S_VX]) > 0.1 || Math.abs(w[S_VY]) > 0.1) {
+          w[S_ANGLE] = Math.atan2(w[S_VY], w[S_VX]) * 180 / Math.PI;
+        }
+
+
+        if (w[S_X] < -500 || w[S_X] > worldWidth + 500 || w[S_Y] < -500 || w[S_Y] > worldHeight + 500) {
+          scatteredWords.splice(i, 1);
+          i--;
+          continue;
+        }
+
+        const margin = 50;
+        if (w[S_X] < margin && w[S_VX] < 0) w[S_VX] = -w[S_VX] * 0.5;
+        if (w[S_X] > worldWidth - margin && w[S_VX] > 0) w[S_VX] = -w[S_VX] * 0.5;
+        if (w[S_Y] < margin && w[S_VY] < 0) w[S_VY] = -w[S_VY] * 0.5;
+        if (w[S_Y] > worldHeight - margin && w[S_VY] > 0) w[S_VY] = -w[S_VY] * 0.5;
+
+        w[S_X] = Math.max(-500, Math.min(worldWidth + 500, w[S_X]));
+        w[S_Y] = Math.max(-500, Math.min(worldHeight + 500, w[S_Y]));
+      }
+    }
+
+    function isInView(n, t, i = 0, r = 0) { const f = cameraX, e = cameraX + viewWidth, o = cameraY, s = cameraY + viewHeight, u = 200; return n + i >= f - u && n - i <= e + u && t + r >= o - u && t - r <= s + u }
+
+    function findNearestTarget() {
+      let t = null, n = Infinity; const i = 800;
+      entity.forEach(r => { const u = getDistance({ x: playerX, y: playerY }, { x: r.x, y: r.y }); u < n && u <= i && (n = u, t = { x: r.x, y: r.y, type: "monster" }) });
+      walls.forEach(r => { const u = getDistance({ x: playerX, y: playerY }, { x: r.x, y: r.y }); u < n && u <= i && (n = u, t = { x: r.x, y: r.y, type: "wall" }) });
+      return t;
+    }
+
+    function calculateGravitationalForce(x, y, entityVx = 0, entityVy = 0) {
+      let totalForceX = 0, totalForceY = 0;
+      for (let i = 0; i < blackHoles.length; i++) {
+        const bh = blackHoles[i];
+        const dx = bh[BH_X] - x, dy = bh[BH_Y] - y;
+        const distanceSq = dx * dx + dy * dy;
+        if (distanceSq < 1) continue;
+
+        const invDistance = 1 / Math.sqrt(distanceSq);
+        const distance = distanceSq * invDistance;
+
+
+
+        let G = 6666;
+        let radialForce = (G * bh[BH_MASS]) / distanceSq;
+
+        const nx = dx * invDistance;
+        const ny = dy * invDistance;
+        const radialVelocity = (entityVx * nx) + (entityVy * ny);
+
+        let tangentialForceX = 0, tangentialForceY = 0;
+        if (radialVelocity < -0.5 && distance < 1500) {
+          const escapeSpeed = Math.abs(radialVelocity);
+          const spiralStrength = Math.min(escapeSpeed * 0.15, 1.5) * (1 - distance / 1500);
+          tangentialForceX = -ny * spiralStrength;
+          tangentialForceY = nx * spiralStrength;
+        }
+
+        if (distance < bh[BH_ABS] * 0.5) radialForce = 0;
+
+        totalForceX += (nx * radialForce) + tangentialForceX;
+        totalForceY += (ny * radialForce) + tangentialForceY;
+      }
+      return { x: totalForceX, y: totalForceY };
+    }
+
+
+    function updatePlayer() {
+
+      let inputX = 0, inputY = 0;
+      if (keys.a) inputX = -1;
+      if (keys.d) inputX = 1;
+      if (keys.w) inputY = -1;
+      if (keys.s) inputY = 1;
+
+
+      let moveX = inputX * playerSpeed;
+      let moveY = inputY * playerSpeed;
+
+
+      const gravityForce = calculateGravitationalForce(playerX, playerY, playerVx, playerVy);
+      moveX += gravityForce.x;
+      moveY += gravityForce.y;
+
+
+      const PLAYER_RADIUS = ENTITY_SIZES.PLAYER * 0.8;
+
+      // 计算OBB最近面法线，推出玩家，避免重叠墙乱弹
+      function resolveWallNormal(px, py, wall, radius) {
+        const angleRad = (wall[W_ANGLE] || 0) * Math.PI / 180;
+        const cosA = Math.cos(angleRad), sinA = Math.sin(angleRad);
+        const dx = px - wall[W_X], dy = py - wall[W_Y];
+        const localX = dx * cosA + dy * sinA;
+        const localY = -dx * sinA + dy * cosA;
+        const hw = wall[W_WIDTH] / 2, hh = wall[W_HEIGHT] / 2;
+        const penL = hw + localX, penR = hw - localX;
+        const penT = hh + localY, penB = hh - localY;
+        const minPen = Math.min(penL, penR, penT, penB);
+        let nlx = 0, nly = 0;
+        if (minPen === penL) nlx = -1;
+        else if (minPen === penR) nlx = 1;
+        else if (minPen === penT) nly = -1;
+        else nly = 1;
+        return {
+          nx: nlx * cosA - nly * sinA,
+          ny: nlx * sinA + nly * cosA,
+          push: minPen + radius + 0.1
+        };
+      }
+
+      let newX = playerX + moveX;
+
+      for (let wall of walls) {
+        if (!wall) continue;
+        if (checkOBBCollision(
+          newX, playerY, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2, 0,
+          wall[W_X], wall[W_Y], wall[W_WIDTH], wall[W_HEIGHT], wall[W_ANGLE] || 0
+        )) {
+          const r = resolveWallNormal(newX, playerY, wall, PLAYER_RADIUS);
+          newX += r.nx * r.push;
+          break;
+        }
+      }
+      playerX = newX;
+
+
+      let newY = playerY + moveY;
+
+      for (let wall of walls) {
+        if (!wall) continue;
+        if (checkOBBCollision(
+          playerX, newY, PLAYER_RADIUS * 2, PLAYER_RADIUS * 2, 0,
+          wall[W_X], wall[W_Y], wall[W_WIDTH], wall[W_HEIGHT], wall[W_ANGLE] || 0
+        )) {
+          const r = resolveWallNormal(playerX, newY, wall, PLAYER_RADIUS);
+          newY += r.ny * r.push;
+          break;
+        }
+      }
+      playerY = newY;
+
+
+      playerX = Math.max(PLAYER_RADIUS, Math.min(worldWidth - PLAYER_RADIUS, playerX));
+      playerY = Math.max(PLAYER_RADIUS, Math.min(worldHeight - PLAYER_RADIUS, playerY));
+
+
+      updateCamera();
+      coordinatesElement.textContent = `X ${Math.floor(playerX)}, Y ${Math.floor(playerY)}`;
+    }
+
+    function hasLineOfSight(fromX, fromY, toX, toY) {
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const distSq = dx * dx + dy * dy;
+      if (distSq > 1000 * 1000) return false;
+      if (distSq < 1) return true;
+
+
+
+
+      const steps = Math.max(Math.abs(dx), Math.abs(dy)) / 10;
+      if (steps < 1) return true;
+
+      const stepX = dx / steps;
+      const stepY = dy / steps;
+
+      let rayX = fromX + stepX;
+      let rayY = fromY + stepY;
+
+      for (let s = 1; s < steps; s++) {
+
+        for (const wall of walls) {
+          if (checkPointInRect(rayX, rayY, wall.x - wall.width / 2, wall.y - wall.height / 2, wall.width, wall.height)) {
+            return false;
+          }
+        }
+
+        for (const e of entities) {
+          if (e[E_TYPE] === ENTITY_TYPE.WALL || e[E_TYPE] === ENTITY_TYPE.PLAYER) continue;
+          const eSize = e[E_SIZE] || 20;
+          const edX = rayX - e[E_X];
+          const edY = rayY - e[E_Y];
+          if (edX * edX + edY * edY < eSize * eSize) {
+            return false;
+          }
+        }
+        rayX += stepX;
+        rayY += stepY;
+      }
+      return true;
+    }
+
+    function updateWanderBehavior(monster) {
+      monster[E_WANDER_TIMER]++;
+      if (monster[E_WANDER_TIMER] >= monster[E_WANDER_INTERVAL]) {
+        monster[E_WANDER_ANGLE] += (Math.random() - 0.5) * Math.PI / 2;
+        monster[E_WANDER_TIMER] = 0;
+      }
+    }
+
+    function performSelfThrow(monster) {
+      if (monster[E_IS_THROWING] || monster[E_TYPE] === ENTITY_TYPE.NUMBER) return;
+      monster[E_IS_THROWING] = true;
+      const angle = Math.atan2(playerY - monster[E_Y], playerX - monster[E_X]);
+      const throwPower = 12;
+      monster[E_VX] = Math.cos(angle) * throwPower;
+      monster[E_VY] = Math.sin(angle) * throwPower;
+      monster[E_ANGLE] = angle * (180 / Math.PI);
+    }
+
+    function combineMonsters(mA, mB, idxA, idxB) {
+      if (idxA > idxB) { entities.splice(idxA, 1); entities.splice(idxB, 1); }
+      else { entities.splice(idxB, 1); entities.splice(idxA, 1); }
+      if (Math.random() < 0.2 && (mA[E_CAN_WALL] || mB[E_CAN_WALL])) { createWall(mA, mB); }
+      else {
+        let newWord = mA[E_WORD] + mB[E_WORD]; recordWord(newWord);
+
+
+        const inheritedCanThrow = mA[E_CAN_THROW] || mB[E_CAN_THROW];
+        const inheritedCanComb = mA[E_CAN_COMB] || mB[E_CAN_COMB];
+        const inheritedCanWall = mA[E_CAN_WALL] || mB[E_CAN_WALL];
+        const inheritedCanAtk = mA[E_CAN_ATK] || mB[E_CAN_ATK];
+
+        entities.push([
+          Date.now() + Math.random(), newWord, (mA[E_X] + mB[E_X]) / 2, (mA[E_Y] + mB[E_Y]) / 2,
+          0, 1, Math.min(mA[E_SPEED], mB[E_SPEED]) * 0.8, 20, ENTITY_TYPE.NORMAL, (mA[E_ANGLE] + mB[E_ANGLE]) / 2,
+          BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60,
+          inheritedCanThrow,
+          inheritedCanComb,
+          inheritedCanWall,
+          inheritedCanAtk,
+          false, false, null, 300, false, 0, 0,
+          0, 0, 0, 0, 0, null,
+          0
+        ]);
+      }
+      score += 30; updateScore();
+    }
+
+    function updateEntities() {
+      for (let i = entities.length - 1; i >= 0; i--) {
+        const e = entities[i];
+        if (!e) { entities.splice(i, 1); continue; }
+
+
+        if (e[E_TYPE] === ENTITY_TYPE.NORMAL || e[E_TYPE] === ENTITY_TYPE.WRITER) {
+          if (e[E_TYPE] === ENTITY_TYPE.WRITER) {
+            updateWriterMovement(e);
+          } else if (!e[E_IS_THROWING]) {
+            let aiThrustX = 0, aiThrustY = 0;
+            updateMonsterAI(e);
+            if (e[E_BEHAVIOR] === BEHAVIOR.WANDER) {
+              updateWanderBehavior(e);
+              const p = e[E_SPEED] * 0.15;
+              aiThrustX = Math.cos(e[E_WANDER_ANGLE]) * p;
+              aiThrustY = Math.sin(e[E_WANDER_ANGLE]) * p;
+            } else if (e[E_BEHAVIOR] === BEHAVIOR.HUNT && e[E_TARGET]) {
+              const angle = Math.atan2(e[E_TARGET].y - e[E_Y], e[E_TARGET].x - e[E_X]);
+              const p = e[E_SPEED] * 0.25;
+              aiThrustX = Math.cos(angle) * p;
+              aiThrustY = Math.sin(angle) * p;
+            }
+            e[E_VX] += aiThrustX;
+            e[E_VY] += aiThrustY;
+          }
+        } else if (e[E_TYPE] === ENTITY_TYPE.NUMBER) {
+          updateNumberAI(e);
+        }
+
+
+        const friction = 0.95;
+        e[E_VX] *= friction;
+        e[E_VY] *= friction;
+
+
+        const speedSq = e[E_VX] * e[E_VX] + e[E_VY] * e[E_VY];
+        if (speedSq > 0.25) {
+          const targetAngle = Math.atan2(e[E_VY], e[E_VX]) * (180 / Math.PI) + 90;
+          if (e[E_ANGLE] == null) e[E_ANGLE] = 0;
+          let angleDiff = targetAngle - e[E_ANGLE];
+          while (angleDiff > 180) angleDiff -= 360;
+          while (angleDiff < -180) angleDiff += 360;
+          e[E_ANGLE] += angleDiff * (Math.abs(angleDiff) > 90 ? 0.3 : 0.1);
+        }
+
+
+        let newX = e[E_X] + e[E_VX];
+        let newY = e[E_Y] + e[E_VY];
+
+        if (newX < e[E_SIZE] || newX > worldWidth - e[E_SIZE]) {
+          e[E_VX] *= -0.5;
+          if (e[E_IS_THROWING]) e[E_IS_THROWING] = false;
+        }
+        if (newY < e[E_SIZE] || newY > worldHeight - e[E_SIZE]) {
+          e[E_VY] *= -0.5;
+          if (e[E_IS_THROWING]) e[E_IS_THROWING] = false;
+        }
+        newX = Math.max(e[E_SIZE], Math.min(worldWidth - e[E_SIZE], newX));
+        newY = Math.max(e[E_SIZE], Math.min(worldHeight - e[E_SIZE], newY));
+
+
+        let wallCollision = false;
+        let wallNormal = null;
+        for (let wall of walls) {
+          if (checkOBBCollision(e[E_X], e[E_Y], e[E_SIZE] * 2, e[E_SIZE] * 2, e[E_ANGLE] || 0,
+            wall[W_X], wall[W_Y], wall[W_WIDTH], wall[W_HEIGHT], wall[W_ANGLE] || 0)) {
+            wallCollision = true;
+            if (e[E_IS_THROWING]) e[E_IS_THROWING] = false;
+            const angleRad = (wall[W_ANGLE] || 0) * Math.PI / 180;
+            const cosA = Math.cos(angleRad), sinA = Math.sin(angleRad);
+            const dx = e[E_X] - wall[W_X], dy = e[E_Y] - wall[W_Y];
+            const localX = dx * cosA + dy * sinA;
+            const localY = -dx * sinA + dy * cosA;
+            const hw = wall[W_WIDTH] / 2, hh = wall[W_HEIGHT] / 2;
+            const penL = hw + localX, penR = hw - localX;
+            const penT = hh + localY, penB = hh - localY;
+            const minPen = Math.min(penL, penR, penT, penB);
+            let nlx = 0, nly = 0;
+            if (minPen === penL) nlx = -1;
+            else if (minPen === penR) nlx = 1;
+            else if (minPen === penT) nly = -1;
+            else nly = 1;
+            wallNormal = { x: nlx * cosA - nly * sinA, y: nlx * sinA + nly * cosA };
+            break;
+          }
+        }
+        if (wallCollision && wallNormal) {
+          const dot = e[E_VX] * wallNormal.x + e[E_VY] * wallNormal.y;
+          if (dot < 0) {
+            e[E_VX] -= dot * wallNormal.x;
+            e[E_VY] -= dot * wallNormal.y;
+          }
+        } else if (wallCollision) {
+          e[E_VX] = 0;
+          e[E_VY] = 0;
+        } else {
+          e[E_X] = newX;
+          e[E_Y] = newY;
+        }
+
+
+        if (e[E_TYPE] === ENTITY_TYPE.NORMAL && e[E_CAN_COMB] && !e[E_IS_COMBINING]) {
+          for (let j = i - 1; j >= 0; j--) {
+            const other = entities[j];
+            if (!other || other[E_TYPE] !== ENTITY_TYPE.NORMAL || !other[E_CAN_COMB] || other[E_IS_COMBINING]) continue;
+            if (getDistance(e, other) < (e[E_SIZE] + other[E_SIZE]) * (e[E_SIZE] + other[E_SIZE])) {
+              if (e[E_CAN_COMB] && other[E_CAN_COMB]) {
+                e[E_IS_COMBINING] = true;
+                other[E_IS_COMBINING] = true;
+                combineMonsters(e, other, i, j);
+                break;
+              }
+            }
+          }
+        }
+
+
+        if (e[E_TYPE] === ENTITY_TYPE.NUMBER) {
+          checkNumberCollision(e, i);
+        }
+
+
+        if (e[E_TYPE] === ENTITY_TYPE.NORMAL || e[E_TYPE] === ENTITY_TYPE.NUMBER || e[E_TYPE] === ENTITY_TYPE.WRITER) {
+          // 玩家 AABB
+          const PLAYER_WIDTH = 48;
+          const PLAYER_HEIGHT = 48;
+          const playerLeft = playerX - PLAYER_WIDTH / 2;
+          const playerRight = playerX + PLAYER_WIDTH / 2;
+          const playerTop = playerY - PLAYER_HEIGHT / 2;
+          const playerBottom = playerY + PLAYER_HEIGHT / 2;
+
+          // 怪物 AABB（使用怪物的 size 作为宽高）
+          const monsterSize = e[E_SIZE] || 30;
+          const monsterLeft = e[E_X] - monsterSize;
+          const monsterRight = e[E_X] + monsterSize;
+          const monsterTop = e[E_Y] - monsterSize;
+          const monsterBottom = e[E_Y] + monsterSize;
+
+          // AABB 碰撞检测
+          const isColliding = !(playerRight < monsterLeft ||
+            playerLeft > monsterRight ||
+            playerBottom < monsterTop ||
+            playerTop > monsterBottom);
+
+          if (isColliding) {
+            let damage = (e[E_TYPE] === ENTITY_TYPE.NUMBER) ? (Math.abs(parseInt(e[E_WORD])) || 1) : (e[E_WORD].length * 4);
+            takeDamage(damage);
+            if (e[E_TYPE] === ENTITY_TYPE.WRITER) dropInventoryOnDeath(e[E_X], e[E_Y], e[E_INVENTORY] || []);
+            entities.splice(i, 1);
+            continue;
+          }
+        }
+      }
+    }
+
+
+
+    function tearWallToScatteredWords(entity, isFromBlackHole = false) {
+
+      if (!entity) return [];
+
+
+      let wordText = "";
+      let entityType = "";
+
+      if (entity instanceof Array) {
+        wordText = entity[E_WORD] || "";
+        entityType = entity[E_TYPE];
+      } else {
+        wordText = entity.word || "";
+        entityType = entity.type || "wall";
+      }
+
+      if (!wordText || wordText.length === 0) return [];
+
+      const letters = wordText.split("");
+      const createdShards = [];
+
+
+      const ex = entity instanceof Array ? (entity[E_X] || 0) : (entity.x || 0);
+      const ey = entity instanceof Array ? (entity[E_Y] || 0) : (entity.y || 0);
+      const evx = entity instanceof Array ? (entity[E_VX] || 0) : (entity.vx || 0);
+      const evy = entity instanceof Array ? (entity[E_VY] || 0) : (entity.vy || 0);
+      const eangle = entity instanceof Array ? (entity[E_ANGLE] || 0) : (entity.angle || 0);
+
+
+      if (!isFromBlackHole || (isFromBlackHole && Math.random() < 0.8)) {
+        letters.forEach((letter, i) => {
+          const shard = [
+            Date.now() + Math.random() + i,
+            letter,
+            ex,
+            ey,
+            evx,
+            evy,
+            2, 20,
+            ENTITY_TYPE.SCATTER,
+            eangle + (Math.random() - 0.5) * 90,
+            BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 999,
+            false, false, false, false, false, false, null, 300, false, 0, 0,
+            666,
+            0, 0, 0, 0, null, 0
+          ];
+          entities.push(shard);
+          createdShards.push(shard);
+        });
+      }
+
+      score += wordText.length * 2;
+      updateScore();
+
+      return createdShards;
+    }
+
+
+
+
+    function updateMonsterAI(monster) {
+      if (monster[E_IS_THROWING]) return;
+
+
+      if (monster[E_LAST_SEEN_TIME] === undefined) monster[E_LAST_SEEN_TIME] = 0;
+      if (monster._lastSeenX === undefined) monster._lastSeenX = monster[E_X];
+      if (monster._lastSeenY === undefined) monster._lastSeenY = monster[E_Y];
+
+
+      if (monster[E_CAN_COMB] && !monster[E_IS_COMBINING]) {
+        let closestMate = null;
+        let minMateDistSq = Infinity;
+        const combineRangeSq = 200 * 200;
+
+        for (let idx = 0; idx < entities.length; idx++) {
+          const other = entities[idx];
+          if (other === monster || !other[E_CAN_COMB] || other[E_IS_COMBINING]) continue;
+          const dSq = getDistance(monster, other);
+          if (dSq < combineRangeSq && dSq < minMateDistSq) {
+            minMateDistSq = dSq;
+            closestMate = other;
+          }
+        }
+
+        if (closestMate) {
+          monster[E_BEHAVIOR] = BEHAVIOR.HUNT;
+          monster[E_TARGET] = { x: closestMate[E_X], y: closestMate[E_Y] };
+          return;
+        }
+      }
+
+
+      if (monster[E_CAN_ATK]) {
+        monster[E_BEHAVIOR] = BEHAVIOR.HUNT;
+        monster[E_TARGET] = { x: playerX, y: playerY };
+      } else {
+
+        if (monster[E_BEHAVIOR] !== BEHAVIOR.HUNT) {
+          monster[E_BEHAVIOR] = BEHAVIOR.WANDER;
+          monster[E_TARGET] = null;
+        }
+      }
+    }
+
+    function updateNumberAI(monster) {
+
+      if (monster[E_CAN_ATK]) {
+        const angle = Math.atan2(playerY - monster[E_Y], playerX - monster[E_X]);
+        const thrust = monster[E_SPEED] * 0.4;
+        monster[E_VX] += Math.cos(angle) * thrust;
+        monster[E_VY] += Math.sin(angle) * thrust;
+        return;
+      }
+
+
+      let target = null; let minDist = Infinity;
+
+      for (let idx = 0; idx < entities.length; idx++) {
+        const m = entities[idx];
+        if (m[E_TYPE] === ENTITY_TYPE.WRITER) {
+          const dSq = getDistance(monster, m);
+          const viewSq = monster[E_VIEW_DIST] * monster[E_VIEW_DIST] * 1.44;
+          if (dSq < viewSq && dSq < minDist) {
+            minDist = dSq;
+            target = m;
+          }
+        }
+      }
+
+      if (target) {
+        const angle = Math.atan2(target[E_Y] - monster[E_Y], target[E_X] - monster[E_X]);
+        const thrust = monster[E_SPEED] * 0.3;
+        monster[E_VX] += Math.cos(angle) * thrust;
+        monster[E_VY] += Math.sin(angle) * thrust;
+      } else {
+        updateWanderBehavior(monster);
+        monster[E_VX] += Math.cos(monster[E_WANDER_ANGLE]) * monster[E_SPEED] * 0.1;
+        monster[E_VY] += Math.sin(monster[E_WANDER_ANGLE]) * monster[E_SPEED] * 0.1;
+      }
+    }
+
+
+    function updateWriterMovement(monster) {
+      if (!monster[E_INVENTORY]) monster[E_INVENTORY] = [];
+      if (!monster[E_SHOOT_COOLDOWN]) monster[E_SHOOT_COOLDOWN] = 0;
+
+      let evadeX = 0, evadeY = 0;
+      let closestThreat = null;
+      let minThreatDist = Infinity;
+
+
+      for (let i = 0; i < entities.length; i++) {
+        const m = entities[i];
+        if (m[E_TYPE] === ENTITY_TYPE.NUMBER) {
+          const d = getDistance(monster, m);
+          if (d < 250) {
+            const angle = Math.atan2(monster[E_Y] - m[E_Y], monster[E_X] - m[E_X]);
+            evadeX += Math.cos(angle) * (250 - d);
+            evadeY += Math.sin(angle) * (250 - d);
+            if (d < minThreatDist) {
+              minThreatDist = d;
+              closestThreat = m;
+            }
+          }
+        }
+      }
+
+
+
+
+
+      if (closestThreat && monster[E_INVENTORY].length > 0 && monster[E_SHOOT_COOLDOWN] <= 0) {
+        const word = monster[E_INVENTORY].shift();
+        const angleRad = Math.atan2(closestThreat[E_Y] - monster[E_Y], closestThreat[E_X] - monster[E_X]);
+        const vx = Math.cos(angleRad) * 19;
+        const vy = Math.sin(angleRad) * 19;
+
+        projectiles.push([
+          Date.now() + Math.random(),
+          word,
+          monster[E_X] + Math.cos(angleRad) * 25,
+          monster[E_Y] + Math.sin(angleRad) * 25,
+          vx,
+          vy,
+          angleRad * 180 / Math.PI,
+          0,
+          word.length,
+          monster[E_ID],
+          60,
+          1800,
+          12
+        ]);
+        monster[E_SHOOT_COOLDOWN] = 30;
+      }
+
+      if (monster[E_SHOOT_COOLDOWN] > 0) monster[E_SHOOT_COOLDOWN]--;
+
+
+      if (evadeX !== 0 || evadeY !== 0) {
+        const mag = Math.sqrt(evadeX * evadeX + evadeY * evadeY);
+        monster[E_VX] += (evadeX / mag) * monster[E_SPEED] * 0.8;
+        monster[E_VY] += (evadeY / mag) * monster[E_SPEED] * 0.8;
+        monster[E_WORD] = "W:" + monster[E_INVENTORY].length + "!";
+      } else {
+
+        monster[E_WORD] = "W:" + monster[E_INVENTORY].length;
+        let target = null; let minDist = Infinity;
+        for (let i = 0; i < entities.length; i++) {
+          const w = entities[i]; if (w === monster) continue;
+          if (w[E_TYPE] === ENTITY_TYPE.SCATTER || w[E_TYPE] === ENTITY_TYPE.NORMAL) {
+            const d = getDistance(monster, w); if (d < minDist) { minDist = d; target = w; }
+          }
+        }
+        if (target) {
+          const angle = Math.atan2(target[E_Y] - monster[E_Y], target[E_X] - monster[E_X]);
+          monster[E_VX] += Math.cos(angle) * monster[E_SPEED] * 0.2;
+          monster[E_VY] += Math.sin(angle) * monster[E_SPEED] * 0.2;
+          if (minDist < 30) {
+            monster[E_INVENTORY].push(target[E_WORD]);
+            entities.splice(entities.indexOf(target), 1);
+          }
+        } else {
+          updateWanderBehavior(monster);
+          monster[E_VX] += Math.cos(monster[E_WANDER_ANGLE]) * monster[E_SPEED] * 0.1;
+          monster[E_VY] += Math.sin(monster[E_WANDER_ANGLE]) * monster[E_SPEED] * 0.1;
+        }
+      }
+    }
+
+
+    function updateProjectiles() {
+      for (let i = 0; i < projectiles.length; i++) {
+        const p = projectiles[i];
+
+
+        if (p[P_PROTECT_TIME] > 0) {
+          p[P_PROTECT_TIME]--;
+        }
+
+
+        p[P_LIFETIME]--;
+        if (p[P_LIFETIME] <= 0) {
+          projectiles.splice(i, 1);
+          i--;
+          continue;
+        }
+
+
+        const gravityForce = calculateGravitationalForce(p[P_X], p[P_Y], p[P_VX], p[P_VY]);
+        p[P_VX] += gravityForce.x * 0.5;
+        p[P_VY] += gravityForce.y * 0.5;
+
+
+        const maxSpeed = 15;
+        const speedSq = p[P_VX] * p[P_VX] + p[P_VY] * p[P_VY];
+        if (speedSq > maxSpeed * maxSpeed) {
+          const scale = (maxSpeed * maxSpeed) / speedSq;
+          p[P_VX] *= scale;
+          p[P_VY] *= scale;
+        }
+
+
+        p[P_X] += p[P_VX];
+        p[P_Y] += p[P_VY];
+
+
+        if (Math.abs(p[P_VX]) > 0.1 || Math.abs(p[P_VY]) > 0.1) {
+          p[P_ANGLE] = Math.atan2(p[P_VY], p[P_VX]) * 180 / Math.PI;
+        }
+
+
+        if (p[P_X] < -100 || p[P_X] > worldWidth + 100 || p[P_Y] < -100 || p[P_Y] > worldHeight + 100) {
+          projectiles.splice(i, 1);
+          i--;
+          continue;
+        }
+
+
+        let consumedByBlackHole = false;
+        for (let j = 0; j < blackHoles.length; j++) {
+          const bh = blackHoles[j];
+          const dx = bh[BH_X] - p[P_X];
+          const dy = bh[BH_Y] - p[P_Y];
+          const distSq = dx * dx + dy * dy;
+          const coreRadius = bh[BH_ABS];
+          const coreRadiusSq = coreRadius * coreRadius;
+
+
+          if (distSq < coreRadiusSq) {
+            bh[BH_MASS] += 0.05;
+            bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+            projectiles.splice(i, 1);
+            consumedByBlackHole = true;
+            break;
+          }
+        }
+        if (consumedByBlackHole) continue;
+
+
+        let hitWall = false;
+        for (let j = 0; j < walls.length; j++) {
+          const wall = walls[j];
+          if (checkOBBCollision(p[P_X], p[P_Y], 20, 20, p[P_ANGLE],
+            wall[W_X], wall[W_Y], wall[W_WIDTH], wall[W_HEIGHT], wall[W_ANGLE] || 0)) {
+            const damageCount = p[P_DAMAGE] || 1;
+            for (let d = 0; d < damageCount; d++) reduceWallCharacter(wall);
+            projectiles.splice(i, 1);
+            hitWall = true;
+            break;
+          }
+        }
+        if (hitWall) continue;
+
+
+        let hitMonsterFlag = false;
+        for (let j = 0; j < entities.length; j++) {
+          const m = entities[j];
+          if (m[E_ID] === p[P_OWNER]) continue;
+
+          if (m[E_TYPE] === ENTITY_TYPE.NORMAL || m[E_TYPE] === ENTITY_TYPE.WRITER || m[E_TYPE] === ENTITY_TYPE.NUMBER) {
+            const mDx = p[P_X] - m[E_X];
+            const mDy = p[P_Y] - m[E_Y];
+            const mDistSq = mDx * mDx + mDy * mDy;
+            const mSize = m[E_SIZE] || 20;
+
+            if (mDistSq < (12 + mSize) * (12 + mSize)) {
+              hitMonster(j, { damage: p[P_DAMAGE] });
+              projectiles.splice(i, 1);
+              hitMonsterFlag = true;
+              break;
+            }
+          }
+        }
+        if (hitMonsterFlag) continue;
+
+
+        const dx = p[P_X] - playerX;
+        const dy = p[P_Y] - playerY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < 20 * 20) {
+          const isOwner = (p[P_OWNER] === 0);
+          if (isOwner) {
+            if (p[P_PROTECT_TIME] <= 0) {
+              takeDamage(p[P_DAMAGE] || 1);
+              projectiles.splice(i, 1);
+              continue;
+            }
+          } else {
+            takeDamage(p[P_DAMAGE] || 1);
+            projectiles.splice(i, 1);
+            continue;
+          }
+        }
+      }
+    }
+
+
+
+    function checkNumberCollision(numE, numIdx) {
+      for (let i = entities.length - 1; i >= 0; i--) {
+        const otherE = entities[i]; if (i === numIdx) continue;
+
+
+        if (getDistance(numE, otherE) < (numE[E_SIZE] + otherE[E_SIZE]) * (numE[E_SIZE] + otherE[E_SIZE])) {
+
+
+          if (otherE[E_TYPE] === ENTITY_TYPE.NUMBER) {
+            addNumbers(numE, otherE, numIdx, i);
+            return;
+          }
+
+
+          else if (otherE[E_TYPE] === ENTITY_TYPE.WRITER) {
+
+            dropInventoryOnDeath(otherE[E_X], otherE[E_Y], otherE[E_INVENTORY] || []);
+
+            entities.splice(i, 1);
+
+            if (i < numIdx) numIdx--;
+
+            numE[E_VX] += (Math.random() - 0.5) * 4;
+            numE[E_VY] += (Math.random() - 0.5) * 4;
+            score += 50; updateScore();
+            return;
+          }
+
+
+          else {
+            handleNumberWordCollision(numE, otherE, numIdx, i);
+            return;
+          }
+        }
+      }
+    }
+
+    function addNumbers(n, t, idxA, idxB) {
+      const f = parseInt(n[E_WORD]) + parseInt(t[E_WORD]);
+      entities.splice(Math.max(idxA, idxB), 1); entities.splice(Math.min(idxA, idxB), 1);
+
+
+      const inheritedCanAtk = n[E_CAN_ATK] || t[E_CAN_ATK];
+
+      const inheritedCanComb = n[E_CAN_COMB] || t[E_CAN_COMB];
+
+      entities.push([
+        Date.now() + Math.random(), f.toString(), (n[E_X] + t[E_X]) / 2, (n[E_Y] + t[E_Y]) / 2,
+        (Math.random() - .5) * 2, (Math.random() - .5) * 2, (n[E_SPEED] + t[E_SPEED]) / 2 * gameSpeed, 20, ENTITY_TYPE.NUMBER, 0,
+        BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60,
+        false,
+        inheritedCanComb,
+        false,
+        inheritedCanAtk,
+        false, false, null, 800,
+        false, 0, 3,
+        0, 0, 0, 0, 0, null,
+        0
+      ]);
+      score += f === 0 ? 20 : f > 0 ? 15 : 25; updateScore();
+    }
+
+    function handleNumberWordCollision(numE, wordE, numIdx, wordIdx) {
+      const u = parseInt(numE[E_WORD]);
+      if (u === 0) {
+        splitWord(wordE);
+        entities.splice(numIdx, 1); score += 15;
+      }
+      else if (u > 0) {
+        for (let k = 0; k < u; k++) copyWord(wordE);
+        entities.splice(numIdx, 1); score += u * 5;
+      }
+      else {
+        entities.splice(Math.max(numIdx, wordIdx), 1);
+        entities.splice(Math.min(numIdx, wordIdx), 1);
+        score += Math.abs(u) * 10;
+      }
+      updateScore();
+    }
+
+
+
+    function handleWallCollisionSimple(n) { n.pathfindingAttempts++; const i = [{ vx: 0, vy: 1 }, { vx: 1, vy: 0 }, { vx: -1, vy: 0 }, { vx: 0, vy: -1 }, { vx: .7, vy: .7 }, { vx: -.7, vy: .7 }], t = i[Math.floor(Math.random() * i.length)]; let r = n.x + t.vx * n.speed * 2, u = n.y + t.vy * n.speed * 2, f = !0; for (let t of walls) if (checkRectCollision({ x: r - n.size, y: u - n.size, width: n.size * 2, height: n.size * 2 }, { x: t.x - t.width / 2, y: t.y - t.height / 2, width: t.width, height: t.height })) { f = !1; break } f ? (n.x = r, n.y = u, n.vx = t.vx * n.speed, n.vy = t.vy * n.speed) : Math.abs(n.vx) > Math.abs(n.vy) ? (n.vy = n.speed, n.vx = 0) : (n.vx = n.speed * (Math.random() > .5 ? 1 : -1), n.vy = 0) }
+    function forceMoveentityimple(n) { const t = Math.random() * Math.PI * 2, i = n.speed * 3; n.x += Math.cos(t) * i; n.y += Math.sin(t) * i; n.x = Math.max(n.size, Math.min(worldWidth - n.size, n.x)); n.y = Math.max(n.size, Math.min(worldHeight - n.size, n.y)); n.vx = 0; n.vy = n.speed }
+
+    function combineentity(monsterA, monsterB, indexA, indexB) {
+      if (indexA > indexB) { entity.splice(indexA, 1); entity.splice(indexB, 1); }
+      else { entity.splice(indexB, 1); entity.splice(indexA, 1); }
+      if (Math.random() < 0.2 && (monsterA.canToWall || monsterB.canToWall)) { createWall(monsterA, monsterB); }
+      else {
+        let newWord = monsterA.word + monsterB.word; recordWord(newWord);
+        const newMonster = { id: Date.now() + Math.random(), word: newWord, x: (monsterA.x + monsterB.x) / 2, y: (monsterA.y + monsterB.y) / 2, vx: 0, vy: 1, speed: Math.min(monsterA.speed, monsterB.speed) * 0.8, isCombining: false, combinationTimer: null, combinationTarget: null, size: 20, target: null, type: ENTITY_TYPE.NORMAL, spawnTime: Date.now(), canCombine: false, behavior: BEHAVIOR.WANDER, lastDirectionChange: 0, stuckTimer: 0, pathfindingAttempts: 0, lastX: 0, lastY: 0, stuckCounter: 0, isAvoiding: false, avoidDirection: null, avoidTimer: 0, lastPathfindTime: 0, pathfindCooldown: 400, viewDistance: 300, hasSeenPlayer: false, lastSeenPlayerTime: 0, wanderAngle: Math.random() * Math.PI * 2, wanderTimer: 0, wanderChangeInterval: 60, isSelfThrowing: false, canThrow: monsterA.canThrow || monsterB.canThrow, canCombination: monsterA.canCombination || monsterB.canCombination, canToWall: monsterA.canToWall || monsterB.canToWall, angle: (monsterA.angle + monsterB.angle) / 2, carrying: null };
+        newMonster.lastX = newMonster.x; newMonster.lastY = newMonster.y; entity.push(newMonster);
+        setTimeout(() => newMonster.canCombine = true, 500);
+      }
+      score += 30; updateScore();
+    }
+
+    let liveTopWordsElement = null;
+    let isTopWordsDirty = false;
+
+    function recordWord(n) {
+      const t = allWords.findIndex(t => t.text === n);
+      t !== -1 ? allWords[t].count++ : allWords.push({ text: n, length: n.length, count: 1 });
+      saveGameData();
+      if (isPaused) updatePauseTopWords();
+
+
+      isTopWordsDirty = true;
+    }
+
+    function createWall(n, t) {
+      const i = n[E_WORD] + t[E_WORD];
+      const s = (n[E_X] + t[E_X]) / 2;
+      const h = (n[E_Y] + t[E_Y]) / 2;
+      recordWord(i);
+      const c = ENTITY_SIZES.WALL * 0.6, r = Math.max(1, Math.floor(300 / c)), u = i.split("");
+      let f, e;
+      if (u.length > r) {
+        const n = [];
+        for (let t = 0; t < u.length; t += r) n.push(u.slice(t, t + r).join(""));
+        f = Math.max(...n.map(n => n.length)) * c + 20;
+        e = n.length * (ENTITY_SIZES.WALL + 5) + 20;
+      } else {
+        f = Math.max(u.length * c + 16, 40);
+        e = ENTITY_SIZES.WALL + 16;
+      }
+      if (s - f / 2 < 0 || s + f / 2 > worldWidth || h - e / 2 < 0 || h + e / 2 > worldHeight) {
+        createMonsterInsteadOfWall(n, t);
+        return;
+      }
+
+
+      walls.push([
+        Date.now() + Math.random(),
+        i,
+        s,
+        h,
+        f,
+        e,
+        (n[E_ANGLE] + t[E_ANGLE]) / 2
+      ]);
+
+      const l = entities.indexOf(n), o = entities.indexOf(t);
+      if (l > -1) entities.splice(l, 1);
+      if (o > -1) entities.splice(o > l ? o - 1 : o, 1);
+      score += 30;
+      updateScore();
+    }
+
+    function createMonsterInsteadOfWall(n, t) {
+      let i = n[E_WORD] + t[E_WORD]; recordWord(i);
+      const f = entities.indexOf(n), u = entities.indexOf(t);
+      if (f > -1 && entities.splice(f, 1), u > -1 && entities.splice(u > f ? u - 1 : u, 1), !i || i === "null") { score += 50; updateScore(); return; }
+
+      const inheritedCanThrow = n[E_CAN_THROW] || t[E_CAN_THROW];
+      const inheritedCanComb = n[E_CAN_COMB] || t[E_CAN_COMB];
+      const inheritedCanWall = n[E_CAN_WALL] || t[E_CAN_WALL];
+      const inheritedCanAtk = n[E_CAN_ATK] || t[E_CAN_ATK];
+
+      entities.push([
+        Date.now() + Math.random(), i, (n[E_X] + t[E_X]) / 2, (n[E_Y] + t[E_Y]) / 2,
+        0, 1, Math.min(n[E_SPEED], t[E_SPEED]) * .8, i.length > 1 ? 20 : 15, ENTITY_TYPE.NORMAL, (n[E_ANGLE] + t[E_ANGLE]) / 2,
+        BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60,
+        inheritedCanThrow,
+        inheritedCanComb,
+        inheritedCanWall,
+        inheritedCanAtk,
+        false,
+        false,
+        null,
+        300,
+        false,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        null,
+        0
+      ]);
+    }
+
+    function reduceWallCharacter(wall) {
+      let word = wall[W_WORD];
+      let letters = word.split("");
+
+      if (letters.length > 0) {
+        letters.pop();
+        if (letters.length === 0) {
+          const idx = walls.indexOf(wall);
+          walls.splice(idx, 1);
+          score += 100;
+          updateScore();
+        } else {
+          const newWord = letters.join("");
+          wall[W_WORD] = newWord;
+
+
+          const charWidth = ENTITY_SIZES.WALL * 0.6;
+          const maxLinePx = 300;
+          const maxCharsPerLine = Math.max(1, Math.floor(maxLinePx / charWidth));
+          let width, height;
+
+          if (newWord.length > maxCharsPerLine) {
+            const lines = [];
+            for (let i = 0; i < newWord.length; i += maxCharsPerLine) {
+              lines.push(newWord.slice(i, i + maxCharsPerLine));
+            }
+            width = Math.max(...lines.map(l => l.length)) * charWidth + 20;
+            height = lines.length * (ENTITY_SIZES.WALL + 5) + 20;
+          } else {
+            width = Math.max(newWord.length * charWidth + 16, 40);
+            height = ENTITY_SIZES.WALL + 20;
+          }
+
+          wall[W_WIDTH] = width;
+          wall[W_HEIGHT] = height;
+          score += 10;
+          updateScore();
+        }
+      }
+    }
+
+    function createInheritingShard(original, letter, index) {
+      entities.push([Date.now() + Math.random() + index, letter, original[E_X] + (index - original[E_WORD].length / 2) * 20, original[E_Y], original[E_VX] * 0.8, original[E_VY] * 0.8, original[E_SPEED] * 0.8, original[E_SIZE], original[E_TYPE], original[E_ANGLE] + (index - original[E_WORD].length / 2) * 15, BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60, original[E_CAN_THROW], original[E_CAN_COMB], original[E_CAN_WALL], original[E_CAN_ATK], false, false, null, original[E_VIEW_DIST], false, 0, original[E_PUSH_FORCE], 0, 0, 0, 0, 0, null]);
+    }
+
+
+
+    function checkOBBCollision(cx1, cy1, w1, h1, angle1, cx2, cy2, w2, h2, angle2) {
+      const rad1 = angle1 * Math.PI / 180;
+      const rad2 = angle2 * Math.PI / 180;
+
+
+      const cos1 = Math.cos(rad1), sin1 = Math.sin(rad1);
+      const cos2 = Math.cos(rad2), sin2 = Math.sin(rad2);
+
+      const halfW1 = w1 / 2, halfH1 = h1 / 2;
+      const halfW2 = w2 / 2, halfH2 = h2 / 2;
+
+
+      const corners1 = [
+        { x: cx1 + (-halfW1) * cos1 - (-halfH1) * sin1, y: cy1 + (-halfW1) * sin1 + (-halfH1) * cos1 },
+        { x: cx1 + (halfW1) * cos1 - (-halfH1) * sin1, y: cy1 + (halfW1) * sin1 + (-halfH1) * cos1 },
+        { x: cx1 + (halfW1) * cos1 - (halfH1) * sin1, y: cy1 + (halfW1) * sin1 + (halfH1) * cos1 },
+        { x: cx1 + (-halfW1) * cos1 - (halfH1) * sin1, y: cy1 + (-halfW1) * sin1 + (halfH1) * cos1 }
+      ];
+
+
+      const corners2 = [
+        { x: cx2 + (-halfW2) * cos2 - (-halfH2) * sin2, y: cy2 + (-halfW2) * sin2 + (-halfH2) * cos2 },
+        { x: cx2 + (halfW2) * cos2 - (-halfH2) * sin2, y: cy2 + (halfW2) * sin2 + (-halfH2) * cos2 },
+        { x: cx2 + (halfW2) * cos2 - (halfH2) * sin2, y: cy2 + (halfW2) * sin2 + (halfH2) * cos2 },
+        { x: cx2 + (-halfW2) * cos2 - (halfH2) * sin2, y: cy2 + (-halfW2) * sin2 + (halfH2) * cos2 }
+      ];
+
+
+      const axes = [
+        { x: cos1, y: sin1 },
+        { x: -sin1, y: cos1 },
+        { x: cos2, y: sin2 },
+        { x: -sin2, y: cos2 }
+      ];
+
+
+      function project(corners, axis) {
+        let min = Infinity, max = -Infinity;
+        for (const c of corners) {
+          const proj = c.x * axis.x + c.y * axis.y;
+          min = Math.min(min, proj);
+          max = Math.max(max, proj);
+        }
+        return { min, max };
+      }
+
+
+      for (const axis of axes) {
+        const proj1 = project(corners1, axis);
+        const proj2 = project(corners2, axis);
+        if (proj1.max < proj2.min || proj2.max < proj1.min) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function checkPointInRect(n, t, i, r, u, f) { return n >= i && n <= i + u && t >= r && t <= r + f }
+    function checkCollision(n, t) {
+      const nx = n[E_X] !== undefined ? n[E_X] : n.x;
+      const ny = n[E_Y] !== undefined ? n[E_Y] : n.y;
+      const tx = t[E_X] !== undefined ? t[E_X] : t.x;
+      const ty = t[E_Y] !== undefined ? t[E_Y] : t.y;
+      const tSize = t[E_SIZE] !== undefined ? t[E_SIZE] : t.size;
+      const nType = n[E_TYPE] !== undefined ? n[E_TYPE] : (n.type || 0);
+
+
+      const dx = nx - tx, dy = ny - ty;
+      const distSq = dx * dx + dy * dy;
+
+
+      const collisionBonus = (nType === ENTITY_TYPE.PROJECTILE) ? 30 : 5;
+      const collisionRadius = tSize + collisionBonus;
+
+      return distSq < collisionRadius * collisionRadius;
+    }
+
+
+
+    // ========== 一次性拾取所有与玩家碰撞的单词 ==========
+    // 返回值：本次拾取了多少个单词
+    function pickupScatteredWords() {
+      // 死亡、暂停或背包已满时无法拾取
+      if (isDead || isPaused) return 0;
+      if (inventory.length >= maxInventorySize) return 0;
+
+      // 定义玩家碰撞箱（AABB）
+      const PLAYER_WIDTH = 48;   // 增大拾取范围，更容易拾取
+      const PLAYER_HEIGHT = 48;
+      const playerLeft = playerX - PLAYER_WIDTH / 2;
+      const playerRight = playerX + PLAYER_WIDTH / 2;
+      const playerTop = playerY - PLAYER_HEIGHT / 2;
+      const playerBottom = playerY + PLAYER_HEIGHT / 2;
+
+      let pickedCount = 0;
+
+      // 从后往前遍历，安全删除
+      for (let i = scatteredWords.length - 1; i >= 0; i--) {
+        const wordData = scatteredWords[i];
+
+        // 解析散落词数据
+        let wx, wy, wText;
+
+        if (Array.isArray(wordData)) {
+          wText = wordData[1];
+          wx = wordData[2];
+          wy = wordData[3];
+        } else if (typeof wordData === 'object') {
+          wText = wordData.word || wordData.text;
+          wx = wordData.x;
+          wy = wordData.y;
+        } else {
+          continue;
+        }
+
+        if (!wText || typeof wx !== 'number' || typeof wy !== 'number') continue;
+
+        // 单词碰撞箱
+        const charLen = String(wText).length;
+        const wordWidth = Math.max(20, Math.min(80, charLen * 10));
+        const wordHeight = 26;
+        const wordLeft = wx - wordWidth / 2;
+        const wordRight = wx + wordWidth / 2;
+        const wordTop = wy - wordHeight / 2;
+        const wordBottom = wy + wordHeight / 2;
+
+        // AABB碰撞检测
+        const isColliding = !(playerRight < wordLeft ||
+          playerLeft > wordRight ||
+          playerBottom < wordTop ||
+          playerTop > wordBottom);
+
+        if (isColliding) {
+          // 背包满了就停止
+          if (inventory.length >= maxInventorySize) return;
+
+          // 拾取单词
+          inventory.push(wText);
+
+          updateScore();
+
+          // 记录单词到词库
+          recordWord(wText);
+
+          // 移除已拾取的散落词
+          scatteredWords.splice(i, 1);
+          pickedCount++;
+        }
+      }
+    }
+
+    function createInheritingShard(original, letter, index) {
+      entities.push([
+        Date.now() + Math.random() + index, letter,
+        original[E_X] + (index - original[E_WORD].length / 2) * 20, original[E_Y],
+        original[E_VX] * 0.8, original[E_VY] * 0.8, original[E_SPEED] * 0.8, ENTITY_SIZES.SHARD,
+        original[E_TYPE], original[E_ANGLE] + (index - original[E_WORD].length / 2) * 15,
+        BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 999,
+        original[E_CAN_THROW], original[E_CAN_COMB], original[E_CAN_WALL], original[E_CAN_ATK],
+        false, false, null, original[E_VIEW_DIST], false, 0, original[E_PUSH_FORCE],
+        0, 0, 0, 0, 0, null
+      ]);
+    }
+
+    function splitWord(monster) {
+      const idx = entities.indexOf(monster);
+      if (idx > -1) entities.splice(idx, 1);
+
+
+      if (monster[E_WORD].length <= 1) return;
+
+      const letters = monster[E_WORD].split("");
+      const count = letters.length;
+
+
+      const rad = (monster[E_ANGLE] || 0) * Math.PI / 180;
+
+
+      const dirX = Math.cos(rad);
+      const dirY = -Math.sin(rad);
+
+
+      const charWidth = monster[E_SIZE] * 0.8;
+      const spacing = charWidth;
+
+      letters.forEach((letter, i) => {
+
+
+
+        const offset = (i - (count - 1) / 2) * spacing;
+
+        const spawnX = monster[E_X] + dirX * offset;
+        const spawnY = monster[E_Y] + dirY * offset;
+
+
+        const baseVx = monster[E_VX];
+        const baseVy = monster[E_VY];
+
+        entities.push([
+          Date.now() + Math.random() + i, letter,
+          spawnX,
+          spawnY,
+          baseVx,
+          baseVy,
+          monster[E_SPEED] * 1.1,
+          20, ENTITY_TYPE.NORMAL,
+          monster[E_ANGLE],
+          BEHAVIOR.WANDER, Math.random() * Math.PI * 2, 0, 60,
+          monster[E_CAN_THROW], monster[E_CAN_COMB], monster[E_CAN_WALL], monster[E_CAN_ATK],
+          false, false, null, 300, false, 0, 0,
+          0, 0, 0, 0, 0, null,
+          0
+        ]);
+      });
+    }
+
+    function copyWord(monster) {
+      const copy = monster.slice();
+      copy[E_ID] = Date.now() + Math.random();
+      copy[E_X] = monster[E_X] + (Math.random() - 0.5) * 50;
+      copy[E_Y] = monster[E_Y] + (Math.random() - 0.5) * 50;
+      copy[E_VX] = (Math.random() - 0.5) * 2;
+      copy[E_VY] = (Math.random() - 0.5) * 2;
+      copy[E_IS_THROWING] = false;
+      copy[E_ANGLE] = Math.random() * 360;
+      entities.push(copy);
+    }
+
+    function hitMonster(index, bullet) {
+      const m = entities[index]; if (!m) return;
+      if (m[E_TYPE] === ENTITY_TYPE.NUMBER) { entities.splice(index, 1); score += 25; updateScore(); return; }
+      if (m[E_TYPE] === ENTITY_TYPE.WRITER) { dropInventoryOnDeath(m[E_X], m[E_Y], m[E_INVENTORY] || []); entities.splice(index, 1); score += 50; updateScore(); return; }
+      if (m[E_TYPE] === ENTITY_TYPE.NORMAL) {
+        splitWord(m);
+        score += 20;
+        updateScore();
+      }
+    }
+
+
+
+
+    function showDeathScreen() {
+      document.getElementById("deathScore").textContent = score;
+      const deathScreen = document.getElementById("deathScreen");
+      deathScreen.style.display = "flex";
+      setTimeout(() => deathScreen.classList.add('visible'), 9);
+    }
+
+    function hideDeathScreen() {
+      const deathScreen = document.getElementById("deathScreen");
+      deathScreen.classList.remove('visible');
+      setTimeout(() => deathScreen.style.display = "none", 300);
+    }
+
+
+    function takeDamage(n) {
+      health -= n;
+      health = Math.max(0, health);
+      updateHealth();
+
+      if (health <= 0) {
+        dropInventoryOnDeath(playerX, playerY, inventory);
+        inventory = [];
+        deathCount++;
+        updateDeathCount();
+        isDead = true;
+        if (skipGameover) respawnPlayer(); else showDeathScreen();
+      }
+    }
+
+
+    function respawnPlayer() {
+      isDead = false;
+      spacePressed = false;
+      keys = { w: false, a: false, s: false, d: false };
+
+      inventory = [];
+      playerX = Math.random() * (worldWidth - 100) + 50;
+      playerY = Math.random() * (worldHeight - 100) + 50;
+      playerAngle = 0;
+      health = maxHealth;
+      updateHealth();
+      playerVx = 0;
+      playerVy = 0;
+      updateCamera();
+      hideDeathScreen();
+    }
+
+
+    function updateDeathCount() { deathCountElement.textContent = `DEATHS ${deathCount}`; if (pauseDeathCountElement) pauseDeathCountElement.textContent = deathCount; }
+    function updateScore() { scoreElement.textContent = `SCORE ${score}` }
+    function updateHealth() { healthElement.textContent = `HEALTH ${health}` }
+    function gameOver() { isDead = !0; clearInterval(entitypawnInterval); hideDeathScreen(); }
+
+    function displayBestWords() {
+      bestWordsListElement.innerHTML = ""; allWordsListElement.innerHTML = ""; wordCountElement.textContent = `Total Words ${allWords.length}`;
+      if (allWords.length === 0) { bestWordsListElement.innerHTML = '<div class="noWords">No words created yet</div>'; allWordsListElement.innerHTML = '<div class="noWords">No words created yet</div>'; return; }
+      const sortedWords = [...allWords].sort((a, b) => a.length !== b.length ? b.length - a.length : b.count - a.count);
+      const top10Words = sortedWords.slice(0, 10);
+      top10Words.forEach((word, index) => {
+        const entryDiv = document.createElement("div"); entryDiv.className = "wordEntry";
+        const rankSpan = document.createElement("span"); rankSpan.className = "wordRank"; rankSpan.textContent = `TOP ${index + 1}`;
+        const textSpan = document.createElement("span"); textSpan.className = "wordText"; textSpan.textContent = word.text;
+        const lengthSpan = document.createElement("span"); lengthSpan.className = "wordLength"; lengthSpan.textContent = `${word.length} chars`;
+        entryDiv.appendChild(rankSpan); entryDiv.appendChild(textSpan); entryDiv.appendChild(lengthSpan); bestWordsListElement.appendChild(entryDiv);
+      });
+      sortedWords.forEach((word, index) => {
+        const entryDiv = document.createElement("div"); entryDiv.className = "wordEntry";
+        const rankSpan = document.createElement("span"); rankSpan.className = "wordRank"; rankSpan.textContent = `#${index + 1}`;
+        const textSpan = document.createElement("span"); textSpan.className = "wordText"; textSpan.textContent = word.text;
+        const countSpan = document.createElement("span"); countSpan.className = "wordLength"; countSpan.textContent = `Count: ${word.count}`;
+        entryDiv.appendChild(rankSpan); entryDiv.appendChild(textSpan); entryDiv.appendChild(countSpan); allWordsListElement.appendChild(entryDiv);
+      });
+    }
+
+    function restart() { clearInterval(entitypawnInterval); entity = []; walls = []; projectiles = []; scatteredWords = []; inventory = []; deathCount = 0; updateDeathCount(); gameOverScreen.style.display = "none"; init() }
+
+    function getDistance(a, b) {
+      let ax, ay, bx, by;
+
+
+      if (Array.isArray(a)) {
+
+        if (a.length >= 24 && typeof a[E_X] === 'number') {
+          ax = a[E_X]; ay = a[E_Y];
+        }
+
+        else if (a.length >= 8 && a.length <= 15 && typeof a[BH_X] === 'number') {
+          ax = a[BH_X]; ay = a[BH_Y];
+        }
+
+        else {
+          ax = 0; ay = 0;
+        }
+      } else {
+        ax = a.x || 0; ay = a.y || 0;
+      }
+
+
+      if (Array.isArray(b)) {
+        if (b.length >= 24 && typeof b[E_X] === 'number') {
+          bx = b[E_X]; by = b[E_Y];
+        } else if (b.length >= 8 && b.length <= 15 && typeof b[BH_X] === 'number') {
+          bx = b[BH_X]; by = b[BH_Y];
+        } else {
+          bx = 0; by = 0;
+        }
+      } else {
+        bx = b.x || 0; by = b.y || 0;
+      }
+
+      const dx = ax - bx, dy = ay - by;
+      return dx * dx + dy * dy;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    function tearNormalToNormalLetters(entity) {
+      if (!entity) return [];
+
+      let wordText = "";
+      let ex = 0, ey = 0, evx = 0, evy = 0, eangle = 0, espeed = 0;
+      let canThrow = false, canComb = false, canWall = false, canAtk = false;
+      let viewDist = 300, size = 20;
+      let behavior = BEHAVIOR.WANDER;
+      let wanderAngle = 0, wanderTimer = 0, wanderInterval = 60;
+
+      if (entity instanceof Array) {
+        wordText = entity[E_WORD] || "";
+        ex = entity[E_X] || 0;
+        ey = entity[E_Y] || 0;
+        evx = entity[E_VX] || 0;
+        evy = entity[E_VY] || 0;
+        eangle = entity[E_ANGLE] || 0;
+        espeed = entity[E_SPEED] || 2;
+        canThrow = entity[E_CAN_THROW] || false;
+        canComb = entity[E_CAN_COMB] || false;
+        canWall = entity[E_CAN_WALL] || false;
+        canAtk = entity[E_CAN_ATK] || false;
+        viewDist = entity[E_VIEW_DIST] || 300;
+        size = entity[E_SIZE] || 20;
+        behavior = entity[E_BEHAVIOR] || BEHAVIOR.WANDER;
+        wanderAngle = entity[E_WANDER_ANGLE] || Math.random() * Math.PI * 2;
+        wanderTimer = entity[E_WANDER_TIMER] || 0;
+        wanderInterval = entity[E_WANDER_INTERVAL] || 60;
+      }
+
+      if (!wordText || wordText.length === 0) return [];
+
+
+      if (wordText.length === 1) return [];
+
+      const letters = wordText.split("");
+      const createdEntities = [];
+
+
+      const baseAngle = Math.atan2(evy, evx);
+      const spreadAngle = Math.PI / 3;
+
+      for (let i = 0; i < letters.length; i++) {
+        const letter = letters[i];
+
+
+        const angleOffset = (i / letters.length - 0.5) * spreadAngle;
+        const flyAngle = baseAngle + angleOffset + (Math.random() - 0.5) * 0.5;
+        const flySpeed = Math.max(1.5, espeed * 0.8) + Math.random() * 2;
+
+        const newVx = Math.cos(flyAngle) * flySpeed;
+        const newVy = Math.sin(flyAngle) * flySpeed;
+
+
+        const offsetX = (Math.random() - 0.5) * 25;
+        const offsetY = (Math.random() - 0.5) * 25;
+
+        const newNormal = [
+          Date.now() + Math.random() + i,
+          letter,
+          ex + offsetX,
+          ey + offsetY,
+          newVx,
+          newVy,
+          espeed * 0.9 + Math.random() * 0.5,
+          Math.max(15, size * 0.8),
+          ENTITY_TYPE.NORMAL,
+          Math.atan2(newVy, newVx) * 180 / Math.PI,
+          BEHAVIOR.WANDER,
+          Math.random() * Math.PI * 2,
+          0,
+          wanderInterval,
+          canThrow,
+          canComb,
+          canWall,
+          canAtk,
+          false, false, null,
+          viewDist,
+          false, 0,
+          0, 0, 0, 0, 0, null, 0
+        ];
+
+        entities.push(newNormal);
+        createdEntities.push(newNormal);
+      }
+
+      score += wordText.length * 5;
+      updateScore();
+
+      return createdEntities;
+    }
+
+    function tearScatterToScatterLetters(entity) {
+      if (!entity) return [];
+
+      let wordText = "";
+      let ex = 0, ey = 0, evx = 0, evy = 0, eangle = 0, espeed = 0;
+
+      if (entity instanceof Array) {
+        wordText = entity[E_WORD] || "";
+        ex = entity[E_X] || 0;
+        ey = entity[E_Y] || 0;
+        evx = entity[E_VX] || 0;
+        evy = entity[E_VY] || 0;
+        eangle = entity[E_ANGLE] || 0;
+        espeed = entity[E_SPEED] || 2;
+      }
+
+      if (!wordText || wordText.length <= 1) return [];
+
+      const letters = wordText.split("");
+      const createdEntities = [];
+
+
+      const baseAngle = (evx !== 0 || evy !== 0) ? Math.atan2(evy, evx) : Math.random() * Math.PI * 2;
+      const spreadAngle = Math.PI / 2;
+
+      for (let i = 0; i < letters.length; i++) {
+        const letter = letters[i];
+
+
+        const angleOffset = (i / letters.length - 0.5) * spreadAngle + (Math.random() - 0.5) * 0.8;
+        const flyAngle = baseAngle + angleOffset;
+        const flySpeed = 1.5 + Math.random() * 3;
+
+        const newVx = Math.cos(flyAngle) * flySpeed;
+        const newVy = Math.sin(flyAngle) * flySpeed;
+
+
+        const shard = [
+          Date.now() + Math.random() + i,
+          letter,
+          ex,
+          ey,
+          newVx,
+          newVy,
+          espeed * 0.7 + Math.random() * 0.8,
+          18,
+          ENTITY_TYPE.SCATTER,
+          Math.atan2(newVy, newVx) * 180 / Math.PI,
+          BEHAVIOR.WANDER,
+          Math.random() * Math.PI * 2,
+          0, 999,
+          false, false, false, false,
+          false, false, null, 300, false, 0, 0,
+          666,
+          0, 0, 0, 0, null, 0
+        ];
+
+        entities.push(shard);
+        createdEntities.push(shard);
+      }
+
+      score += wordText.length * 3;
+      updateScore();
+
+      return createdEntities;
+    }
+
+
+
+
+
+    function tearScatterToScatterLetters(entity) {
+      if (!entity) return [];
+
+      let wordText = "";
+      let ex = 0, ey = 0, evx = 0, evy = 0, eangle = 0, espeed = 0;
+
+      if (entity instanceof Array) {
+        wordText = entity[E_WORD] || "";
+        ex = entity[E_X] || 0;
+        ey = entity[E_Y] || 0;
+        evx = entity[E_VX] || 0;
+        evy = entity[E_VY] || 0;
+        eangle = entity[E_ANGLE] || 0;
+        espeed = entity[E_SPEED] || 2;
+      }
+
+      if (!wordText || wordText.length <= 1) return [];
+
+      const letters = wordText.split("");
+      const createdEntities = [];
+
+      for (let i = 0; i < letters.length; i++) {
+        const letter = letters[i];
+
+        const shard = [
+          Date.now() + Math.random() + i,
+          letter,
+          ex + (Math.random() - 0.5) * 50,
+          ey + (Math.random() - 0.5) * 50,
+          evx + (Math.random() - 0.5) * 2,
+          evy + (Math.random() - 0.5) * 2,
+          espeed * 0.8,
+          18,
+          ENTITY_TYPE.SCATTER,
+          eangle + (Math.random() - 0.5) * 60,
+          BEHAVIOR.WANDER,
+          Math.random() * Math.PI * 2,
+          0, 999,
+          false, false, false, false,
+          false, false, null, 300, false, 0, 0,
+          666,
+          0, 0, 0, 0, null, 0
+        ];
+
+        entities.push(shard);
+        createdEntities.push(shard);
+
+
+        for (let bh of blackHoles) {
+          const dx = bh[BH_X] - (ex + (Math.random() - 0.5) * 50);
+          const dy = bh[BH_Y] - (ey + (Math.random() - 0.5) * 50);
+          const distSq = dx * dx + dy * dy;
+          if (distSq < 1) continue;
+
+          const G = 600;
+          const force = (G * bh[BH_MASS]) / distSq;
+          const dist = Math.sqrt(distSq);
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          shard[E_VX] += nx * force * 0.5;
+          shard[E_VY] += ny * force * 0.5;
+        }
+      }
+
+      score += wordText.length * 3;
+      updateScore();
+
+      return createdEntities;
+    }
+
+    function updateBlackHoles() {
+      for (let i = 0; i < blackHoles.length; i++) {
+        const bh = blackHoles[i];
+        if (isNaN(bh[BH_X]) || isNaN(bh[BH_Y])) {
+          bh[BH_X] = worldWidth / 2;
+          bh[BH_Y] = worldHeight / 2;
+        }
+
+
+        bh[BH_TT]++;
+        if (bh[BH_TT] >= 300) {
+          selectBlackHoleTarget(bh);
+          bh[BH_TT] = 0;
+        }
+
+        let dx = bh[BH_X] - entities[E_X];
+        let dy = bh[BH_Y] - entities[E_Y];
+
+
+        let distSq = dx * dx + dy * dy;
+
+
+
+        if (distSq < bh[BH_ABS]) {
+
+
+          if (distSq < 100) {
+            let angle = Math.atan2(dy, dx);
+            entities[E_VX] = Math.cos(angle) * entities[E_SPEED] * 0.2;
+            entities[E_VY] = Math.sin(angle) * entities[E_SPEED] * 0.2;
+          } else {
+
+
+
+            let forceFactor = bh[BH_MASS] * 50 / distSq;
+
+
+            entities[E_VX] = dx * forceFactor;
+            entities[E_VY] = dy * forceFactor;
+
+
+            let maxPullSpeed = entities[E_SPEED] * 0.5;
+            let currentSpeedSq = entities[E_VX] * entities[E_VX] + entities[E_VY] * entities[E_VY];
+            if (currentSpeedSq > maxPullSpeed * maxPullSpeed) {
+              let scale = maxPullSpeed / Math.sqrt(currentSpeedSq);
+              entities[E_VX] *= scale;
+              entities[E_VY] *= scale;
+            }
+          }
+        } else {
+
+          bh[BH_WT]++;
+          if (bh[BH_WT] > 120) {
+            bh[BH_WA] += (Math.random() - 0.5) * Math.PI / 3;
+            bh[BH_WT] = 0;
+          }
+
+          const wanderSpeed = 0.12;
+          bh[BH_X] += Math.cos(bh[BH_WA]) * wanderSpeed;
+          bh[BH_Y] += Math.sin(bh[BH_WA]) * wanderSpeed;
+
+
+          if (bh[BH_X] <= bh[BH_ABS] || bh[BH_X] >= worldWidth - bh[BH_ABS]) {
+            bh[BH_WA] = Math.PI - bh[BH_WA];
+          }
+          if (bh[BH_Y] <= bh[BH_ABS] || bh[BH_Y] >= worldHeight - bh[BH_ABS]) {
+            bh[BH_WA] = -bh[BH_WA];
+          }
+
+          bh[BH_X] = Math.max(bh[BH_ABS], Math.min(worldWidth - bh[BH_ABS], bh[BH_X]));
+          bh[BH_Y] = Math.max(bh[BH_ABS], Math.min(worldHeight - bh[BH_ABS], bh[BH_Y]));
+
+
+          let angleDiff = bh[BH_WA] - bh[BH_ANGLE];
+          while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+          while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+          bh[BH_ANGLE] += angleDiff * 0.05;
+        }
+      }
+    }
+
+    function checkBlackHoleInteractions() {
+
+      for (let i = 0; i < blackHoles.length; i++) {
+        const bh = blackHoles[i];
+        if (getDistance(bh, { x: playerX, y: playerY }) < bh[BH_ABS] * bh[BH_ABS]) {
+          if (skipGameover) respawnPlayer();
+          else showDeathScreen();
+          bh[BH_MASS]++;
+          bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+          return;
+        }
+      }
+
+      for (let i = scatteredWords.length - 1; i >= 0; i--) {
+        const w = scatteredWords[i];
+        let consumed = false;
+
+        for (let j = 0; j < blackHoles.length; j++) {
+          const bh = blackHoles[j];
+          const dx = bh[BH_X] - w[S_X];
+          const dy = bh[BH_Y] - w[S_Y];
+          const distSq = dx * dx + dy * dy;
+
+          const coreRadius = bh[BH_ABS];
+          const coreRadiusSq = coreRadius * coreRadius;
+          const rocheRadius = bh[BH_ABS] * 2.5;
+          const rocheRadiusSq = rocheRadius * rocheRadius;
+
+
+          if (distSq < coreRadiusSq) {
+            bh[BH_MASS] += 0.05;
+            bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+            scatteredWords.splice(i, 1);
+            consumed = true;
+            break;
+          }
+
+
+          if (!consumed && distSq < rocheRadiusSq && distSq >= coreRadiusSq) {
+            const wordLen = (w[S_WORD] || "").length;
+            if (wordLen > 1) {
+
+              const letters = w[S_WORD].split("");
+              for (let k = 0; k < letters.length; k++) {
+                scatteredWords.push([
+                  Date.now() + Math.random() + k,
+                  letters[k],
+                  w[S_X],
+                  w[S_Y],
+                  0,
+                  0,
+                  0,
+                  1800
+                ]);
+              }
+              scatteredWords.splice(i, 1);
+              bh[BH_MASS] += 0.1;
+              bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+              consumed = true;
+              break;
+            }
+          }
+        }
+      }
+
+
+      for (let i = entities.length - 1; i >= 0; i--) {
+        const e = entities[i];
+        if (!e) continue;
+
+        let consumed = false;
+
+        for (let j = 0; j < blackHoles.length; j++) {
+          const bh = blackHoles[j];
+          const distSq = getDistance(bh, e);
+
+          const coreRadius = bh[BH_ABS];
+          const coreRadiusSq = coreRadius * coreRadius;
+          const rocheRadius = bh[BH_ABS] * 2.5;
+          const rocheRadiusSq = rocheRadius * rocheRadius;
+
+
+          if (distSq < coreRadiusSq) {
+            if (e[E_TYPE] === ENTITY_TYPE.WRITER) {
+              dropInventoryOnDeath(e[E_X], e[E_Y], e[E_INVENTORY] || []);
+            }
+            if (e[E_TYPE] === ENTITY_TYPE.NUMBER) {
+              bh[BH_MASS] += 0.15;
+            } else if (e[E_TYPE] === ENTITY_TYPE.NORMAL && (e[E_WORD] || "").length === 1) {
+              bh[BH_MASS] += 0.1;
+            } else {
+              bh[BH_MASS] += 0.5;
+            }
+            entities.splice(i, 1);
+            bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+            consumed = true;
+            break;
+          }
+
+
+          if (!consumed && distSq < rocheRadiusSq && distSq >= coreRadiusSq) {
+            const wordLen = (e[E_WORD] || "").length;
+
+
+            if (e[E_TYPE] === ENTITY_TYPE.NORMAL && wordLen > 1) {
+              tearNormalToNormalLetters(e);
+              entities.splice(i, 1);
+              bh[BH_MASS] += 0.15;
+              bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+              consumed = true;
+              break;
+            }
+
+
+            if (e[E_TYPE] === ENTITY_TYPE.SCATTER && wordLen > 1) {
+              tearScatterToScatterLetters(e);
+              entities.splice(i, 1);
+              bh[BH_MASS] += 0.1;
+              bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+              consumed = true;
+              break;
+            }
+          }
+        }
+      }
+
+      for (let i = walls.length - 1; i >= 0; i--) {
+        const wall = walls[i];
+        if (!wall) continue;
+
+        for (let j = 0; j < blackHoles.length; j++) {
+          const bh = blackHoles[j];
+          const dx = bh[BH_X] - wall[W_X];
+          const dy = bh[BH_Y] - wall[W_Y];
+          const distSq = dx * dx + dy * dy;
+
+          const coreRadius = bh[BH_ABS];
+          const coreRadiusSq = coreRadius * coreRadius;
+          const rocheRadius = bh[BH_ABS] * 2.5;
+          const rocheRadiusSq = rocheRadius * rocheRadius;
+
+          if (distSq < coreRadiusSq) {
+            walls.splice(i, 1);
+            bh[BH_MASS] += 0.5;
+            bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+            break;
+          }
+
+          if (distSq < rocheRadiusSq && distSq >= coreRadiusSq) {
+            tearWallToScatteredWords(wall);
+            walls.splice(i, 1);
+            bh[BH_MASS] += 0.3;
+            bh[BH_ABS] = 80 + Math.pow(bh[BH_MASS], 0.5) * 15;
+            break;
+          }
+        }
+      }
+    }
+
+    function selectBlackHoleTarget(bh) {
+      const n = [];
+      for (let i = 0; i < entities.length; i++) {
+        n.push({ x: entities[i][E_X], y: entities[i][E_Y] });
+      }
+      for (let i = 0; i < walls.length; i++) {
+        n.push({ x: walls[i].x, y: walls[i].y });
+      }
+      if (n.length > 0) bh[BH_TARGET] = n[Math.floor(Math.random() * n.length)];
+      else bh[BH_TARGET] = null;
+    }
+
+
+
+    function tearWallToScatteredWords(wall) {
+      let wordText = wall[W_WORD] || "";
+      if (!wordText) return;
+
+      let letters = wordText.split("");
+      const ex = wall[W_X];
+      const ey = wall[W_Y];
+      const eangle = wall[W_ANGLE] || 0;
+
+      letters.forEach((letter, i) => {
+
+        const angleRad = eangle * Math.PI / 180;
+        const speed = 3 + Math.random() * 2;
+        const vx = Math.cos(angleRad) * speed * (Math.random() - 0.5) * 1.5;
+        const vy = Math.sin(angleRad) * speed * (Math.random() - 0.5) * 1.5;
+
+        scatteredWords.push([
+          Date.now() + Math.random() + i,
+          letter,
+          ex,
+          ey,
+          vx,
+          vy,
+          eangle,
+          1800
+        ]);
+      });
+
+      score += wordText.length * 2;
+      updateScore();
+    }
+
+    function createInheritingShardWithPosition(originalMonster, letter, index, targetArray, x, y, vx, vy) {
+      const shard = {
+        id: Date.now() + Math.random() + index,
+        word: letter,
+        x: x,
+        y: y,
+        vx: vx,
+        vy: vy,
+        speed: originalMonster.speed * 0.8,
+        size: ENTITY_SIZES.SHARD,
+        target: null,
+        type: originalMonster.type,
+        spawnTime: Date.now(),
+        canCombine: false,
+        behavior: BEHAVIOR.WANDER,
+        lastDirectionChange: 0,
+        stuckTimer: 0,
+        pathfindingAttempts: 0,
+        lastX: 0,
+        lastY: 0,
+        stuckCounter: 0,
+        isAvoiding: false,
+        avoidDirection: null,
+        avoidTimer: 0,
+        lastPathfindTime: 0,
+        pathfindCooldown: 400,
+        viewDistance: originalMonster.viewDistance,
+        hasSeenPlayer: false,
+        lastSeenPlayerTime: 0,
+        wanderAngle: Math.random() * Math.PI * 2,
+        wanderTimer: 0,
+        wanderChangeInterval: 60,
+        isSelfThrowing: false,
+        canThrow: originalMonster.canThrow,
+        canCombination: originalMonster.canCombination,
+        canToWall: originalMonster.canToWall,
+        canToAttackPlayer: originalMonster.canToAttackPlayer,
+        angle: Math.atan2(vy, vx) * (180 / Math.PI)
+      };
+
+      shard.lastX = shard.x;
+      shard.lastY = shard.y;
+      targetArray.push(shard);
+
+      setTimeout(() => {
+        shard.canCombine = true;
+      }, 500);
+    }
+
+    function drawRotatedText(ctx, text, x, y, size, color, angle) {
+      ctx.font = `${size}px Arial`;
+      ctx.fillStyle = color;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+
+      if (!angle || Math.abs(angle) < 0.01) {
+        ctx.fillText(text, x, y);
+        return;
+      }
+
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle * Math.PI / 180);
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    }
+
+    function drawWall(ctx, wall, cameraX, cameraY) {
+      ctx.save();
+      const x = wall[W_X] - cameraX;
+      const y = wall[W_Y] - cameraY;
+      ctx.translate(x, y);
+
+      if (wall[W_ANGLE]) {
+        ctx.rotate(wall[W_ANGLE] * Math.PI / 180);
+      }
+
+      ctx.fillStyle = isLightMode ? "#333" : "#fff";
+      ctx.font = `${ENTITY_SIZES.WALL}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      const word = wall[W_WORD];
+      const maxLinePx = wall[W_WIDTH];
+      const lineHeight = ENTITY_SIZES.WALL + 4;
+
+      if (word.length > 0 && maxLinePx > 0) {
+        const lines = [];
+        let cur = "";
+        for (let ci = 0; ci < word.length; ci++) {
+          const test = cur + word[ci];
+          if (ctx.measureText(test).width > maxLinePx && cur.length > 0) {
+            lines.push(cur);
+            cur = word[ci];
+          } else {
+            cur = test;
+          }
+        }
+        if (cur) lines.push(cur);
+        if (lines.length > 1) {
+          const startY = -(lines.length - 1) * lineHeight / 2;
+          lines.forEach((line, index) => {
+            ctx.fillText(line, 0, startY + index * lineHeight);
+          });
+        } else {
+          ctx.fillText(word, 0, 0);
+        }
+      } else {
+        ctx.fillText(word, 0, 0);
+      }
+
+      ctx.restore();
+    }
+
+    function drawWallExternalEdges(ctx, wall, allWalls) {
+      ctx.strokeStyle = isLightMode ? "#333" : "#fff";
+      ctx.lineWidth = 2;
+
+      const left = -wall.width / 2;
+      const right = wall.width / 2;
+      const top = -wall.height / 2;
+      const bottom = wall.height / 2;
+
+      const edges = [
+        { start: { x: left, y: top }, end: { x: right, y: top }, visible: true },
+        { start: { x: right, y: top }, end: { x: right, y: bottom }, visible: true },
+        { start: { x: right, y: bottom }, end: { x: left, y: bottom }, visible: true },
+        { start: { x: left, y: bottom }, end: { x: left, y: top }, visible: true }
+      ];
+
+      allWalls.forEach(otherWall => {
+        if (otherWall.id === wall.id) return;
+
+        const otherLeft = otherWall.x - wall.x - otherWall.width / 2;
+        const otherRight = otherWall.x - wall.x + otherWall.width / 2;
+        const otherTop = otherWall.y - wall.y - otherWall.height / 2;
+        const otherBottom = otherWall.y - wall.y + otherWall.height / 2;
+
+        if (edges[0].visible &&
+          top >= otherTop && top <= otherBottom &&
+          !(right < otherLeft || left > otherRight)) {
+          if (left < otherLeft && right > otherLeft) {
+            edges[0].start = { x: left, y: top };
+            edges[0].end = { x: otherLeft, y: top };
+          } else if (left < otherRight && right > otherRight) {
+            edges[0].start = { x: otherRight, y: top };
+            edges[0].end = { x: right, y: top };
+          } else {
+            edges[0].visible = false;
+          }
+        }
+
+        if (edges[1].visible &&
+          right >= otherLeft && right <= otherRight &&
+          !(bottom < otherTop || top > otherBottom)) {
+          if (top < otherTop && bottom > otherTop) {
+            edges[1].start = { x: right, y: top };
+            edges[1].end = { x: right, y: otherTop };
+          } else if (top < otherBottom && bottom > otherBottom) {
+            edges[1].start = { x: right, y: otherBottom };
+            edges[1].end = { x: right, y: bottom };
+          } else {
+            edges[1].visible = false;
+          }
+        }
+
+        if (edges[2].visible &&
+          bottom >= otherTop && bottom <= otherBottom &&
+          !(right < otherLeft || left > otherRight)) {
+          if (left < otherLeft && right > otherLeft) {
+            edges[2].start = { x: left, y: bottom };
+            edges[2].end = { x: otherLeft, y: bottom };
+          } else if (left < otherRight && right > otherRight) {
+            edges[2].start = { x: otherRight, y: bottom };
+            edges[2].end = { x: right, y: bottom };
+          } else {
+            edges[2].visible = false;
+          }
+        }
+
+        if (edges[3].visible &&
+          left >= otherLeft && left <= otherRight &&
+          !(bottom < otherTop || top > otherBottom)) {
+          if (top < otherTop && bottom > otherTop) {
+            edges[3].start = { x: left, y: top };
+            edges[3].end = { x: left, y: otherTop };
+          } else if (top < otherBottom && bottom > otherBottom) {
+            edges[3].start = { x: left, y: otherBottom };
+            edges[3].end = { x: left, y: bottom };
+          } else {
+            edges[3].visible = false;
+          }
+        }
+      });
+
+      edges.forEach(edge => {
+        if (edge.visible) {
+          ctx.beginPath();
+          ctx.moveTo(edge.start.x, edge.start.y);
+          ctx.lineTo(edge.end.x, edge.end.y);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function draw() {
+      ctx.fillStyle = isLightMode ? "rgba(234,234,234,0.8)" : "rgba(0,0,0,0.8)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      entitiesElement.textContent = `ENTITIES ${entities.length + walls.length + projectiles.length + scatteredWords.length}`;
+
+
+      walls.forEach(wall => {
+        if (isInView(wall[W_X], wall[W_Y], wall[W_WIDTH], wall[W_HEIGHT])) {
+          drawWall(ctx, wall, cameraX, cameraY);
+        }
+      });
+
+
+
+      projectiles.forEach(p => {
+        if (isInView(p[P_X], p[P_Y], 20, 20)) {
+          drawRotatedText(ctx, p[P_WORD], p[P_X] - cameraX, p[P_Y] - cameraY, 28, "#fff", p[P_ANGLE]);
+        }
+      });
+
+
+      scatteredWords.forEach(w => {
+        if (isInView(w[S_X], w[S_Y], 30, 30)) {
+          const color = isLightMode ? "#666" : "#ffffff";
+          drawRotatedText(ctx, w[S_WORD], w[S_X] - cameraX, w[S_Y] - cameraY, 18, color, w[S_ANGLE] || 0);
+        }
+      });
+
+
+      entities.forEach(e => {
+        if (!isInView(e[E_X], e[E_Y], e[E_SIZE] * 2, e[E_SIZE] * 2)) return;
+        let color = isLightMode ? "#333" : "#fff";
+        let size = e[E_SIZE] || ENTITY_SIZES.MONSTER;
+
+        if (e[E_TYPE] === ENTITY_TYPE.NUMBER) {
+          const num = parseInt(e[E_WORD]);
+          color = num < 0 ? "#ff00ff" : num === 0 ? (isLightMode ? "#333" : "#ffffff") : "#00ff00";
+        } else if (e[E_TYPE] === ENTITY_TYPE.WRITER) {
+          color = isLightMode ? "#000" : "#fff";
+        } else {
+
+        }
+        drawRotatedText(ctx, e[E_WORD], e[E_X] - cameraX, e[E_Y] - cameraY, size, color, e[E_ANGLE] || 0);
+      });
+
+
+      drawRotatedText(ctx, "-", playerX - cameraX, playerY - cameraY, ENTITY_SIZES.PLAYER, isLightMode ? "#000" : "#fff", playerAngle || 0);
+      drawMinimap();
+    }
+
+    function drawMinimap() {
+      const n = minimapCtx, t = 200 / worldWidth, i = 150 / worldHeight;
+      n.fillStyle = isLightMode ? "#ddd" : "#000"; n.fillRect(0, 0, 200, 150);
+      n.strokeStyle = isLightMode ? "#333" : "#fff"; n.lineWidth = 1; n.strokeRect(0, 0, 200, 150);
+
+      n.fillStyle = isLightMode ? "#aaa" : "#666";
+      walls.forEach(wall => {
+        const u = wall[W_X] * t;
+        const f = wall[W_Y] * i;
+        const e = Math.max(1, wall[W_WIDTH] * t);
+        const o = Math.max(1, wall[W_HEIGHT] * i);
+        if (u + e >= 0 && u <= 200 && f + o >= 0 && f <= 150) {
+          n.fillRect(u - e / 2, f - o / 2, e, o);
+        }
+      });
+
+      entities.forEach(r => {
+        const u = r[E_X] * t, f = r[E_Y] * i;
+        if (u >= 0 && u <= 200 && f >= 0 && f <= 150) {
+          if (r[E_TYPE] === ENTITY_TYPE.NUMBER) {
+            const num = parseInt(r[E_WORD]); n.fillStyle = num < 0 ? "#4244bf" : num === 0 ? (isLightMode ? "#333" : "#ffffff") : "#00ff00";
+          } else if (r[E_TYPE] === ENTITY_TYPE.WRITER) { n.fillStyle = "#fff"; }
+          else if (r[E_TYPE] === ENTITY_TYPE.PROJECTILE) { n.fillStyle = "#ffff00"; }
+          else if (r[E_TYPE] === ENTITY_TYPE.SHARD) { n.fillStyle = isLightMode ? "#888" : "#aaa"; }
+          else { n.fillStyle = "#ff0000"; }
+          n.beginPath(); n.arc(u, f, Math.max(2, 8 * t), 0, Math.PI * 2); n.fill();
+        }
+      });
+
+      n.fillStyle = "#00ff00"; n.beginPath(); n.arc(playerX * t, playerY * i, Math.max(3, 10 * t), 0, Math.PI * 2); n.fill();
+      n.strokeStyle = "rgba(255, 255, 255, 0.3)"; n.strokeRect(cameraX * t, cameraY * i, viewWidth * t, viewHeight * i);
+    }
+
+
+    function updateLiveTopWords() {
+      if (!liveTopWordsElement) liveTopWordsElement = document.getElementById("liveTopWords");
+      if (!liveTopWordsElement) return;
+
+      let container = liveTopWordsElement.querySelector('.live-words-container');
+      if (!container) {
+        container = document.createElement('div');
+        container.className = 'live-words-container';
+        liveTopWordsElement.appendChild(container);
+      }
+
+      container.innerHTML = "";
+
+      if (allWords.length === 0) {
+        return;
+      }
+
+      const sortedWords = [...allWords].sort((a, b) => a.length !== b.length ? b.length - a.length : b.count - a.count);
+      const top10Words = sortedWords.slice(0, 10);
+
+      top10Words.forEach((word) => {
+        const entryDiv = document.createElement("div");
+        entryDiv.className = "liveWordEntry";
+        entryDiv.textContent = word.text;
+        container.appendChild(entryDiv);
+      });
+    }
+    function gameLoop() {
+      frameCount++;
+      if (!isPaused) {
+        for (let i = 0; i < entities.length; i++) {
+          const e = entities[i];
+          if (!e) continue;
+          const gravityForce = calculateGravitationalForce(e[E_X], e[E_Y], e[E_VX], e[E_VY]);
+          const gravityMultiplier = (e[E_TYPE] === ENTITY_TYPE.NORMAL || e[E_TYPE] === ENTITY_TYPE.WRITER || e[E_TYPE] === ENTITY_TYPE.NUMBER) ? 0.6 : 1.0;
+          e[E_VX] += gravityForce.x * gravityMultiplier;
+          e[E_VY] += gravityForce.y * gravityMultiplier;
+        }
+
+        checkBlackHoleInteractions();
+        updateEntities();
+        updateBlackHoles();
+        updateScatteredWords();
+        updateProjectiles();
+
+        if (!isDead) {
+          updatePlayer();
+        }
+        if (!isDead && zPressed) {
+
+          for (let pickupCount = 0; pickupCount < 3; pickupCount++) {
+            const picked = pickupScatteredWords();
+            if (!picked) break;
+          }
+        }
+      }
+      draw();
+      if (isTopWordsDirty) { updateLiveTopWords(); isTopWordsDirty = false; }
+      if (spaceHoldFrames > 0) {
+        spaceHoldFrames++;
+
+        if (spaceHoldFrames - lastShootFrame >= SHOOT_FRAME_INTERVAL) {
+          if (!isPaused && !isDead && inventory.length > 0) {
+            shootFirstInventoryWord();
+            lastShootFrame = spaceHoldFrames;
+          }
+        }
+      }
+
+      requestAnimationFrame(() => gameLoop());
+    }
+
+    function loadSkipGameMenuSetting() {
+      const saved = localStorage.getItem("skipGameMenu");
+      if (saved !== null) {
+        skipGameover = saved === "true";
+        const toggle = document.getElementById("skipGameMenuToggle");
+        if (skipGameover) {
+          toggle.classList.add("active");
+        }
+      }
+    }
+
+    window.addEventListener("load", () => {
+      loadSkipGameMenuSetting();
+      init()
+    });
+  </script>
+</body>
+
+</html>
